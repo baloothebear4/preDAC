@@ -204,6 +204,34 @@ class RemoteController:
             #return "no", "key"
             pass
 
+from   pcf8574 import PCF8574
+
+""" need to move this class into the hw interface package """
+class Volume(PCF8574):
+    i2c_port = 1
+    address  = 0x20
+    mute_in  = 0
+    dBout32  = 1
+    dBout16  = 2
+    dBout8   = 3
+    dBout4   = 4
+    dBout2   = 5
+    dBout1   = 6
+    testLEDout = 0
+    interuptPin = 24 #pin 18
+    Button      = 2
+
+    def __init__(self):
+        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
+        for i in range (0,8):
+            print " port ", i , ' reads ', self.port[i]
+            # time.sleep(0.1)
+
+    def printPorts(self):
+        print "Volume.printPorts> ", self.port
+
+
+
 class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #subclass so that there is only 1 interface point to all the HW classes
     def __init__(self,events):
         VolumeBoard.__init__(self, events)
