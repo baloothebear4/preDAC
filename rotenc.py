@@ -15,32 +15,6 @@
 
 import RPi.GPIO as GPIO
 import time, threading
-from   pcf8574 import PCF8574
-
-""" need to move this class into the hw interface package """
-class Volume(PCF8574):
-    i2c_port = 1
-    address  = 0x20
-    mute_in  = 0
-    dBout32  = 1
-    dBout16  = 2
-    dBout8   = 3
-    dBout4   = 4
-    dBout2   = 5
-    dBout1   = 6
-    testLEDout = 0
-    interuptPin = 24 #pin 18
-    Button      = 2
-
-    def __init__(self):
-        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
-        for i in range (0,8):
-            print " port ", i , ' reads ', self.port[i]
-            # time.sleep(0.1)
-
-    def printPorts(self):
-        print "Volume.printPorts> ", self.port
-
 
 class RotaryEncoder:
 
@@ -51,9 +25,9 @@ class RotaryEncoder:
 
     # Initialise rotary encoder object
     def __init__(self,callback):
-        self.pinA = 16
+        self.pinA = 26
         self.pinB = 16
-        self.button = 16
+        self.button = 13
         self.callback = callback
 
         # new
@@ -64,10 +38,6 @@ class RotaryEncoder:
         self.moved = 0  #track the current state
 
         self.LockRotary = threading.Lock()		# create lock for rotary switch
-        self.vol = Volume()
-        self.vol.printPorts()
-
-
 
         GPIO.setmode(GPIO.BCM)
 
@@ -78,18 +48,14 @@ class RotaryEncoder:
         # GPIO.setup(self.pinB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         # GPIO.setup(self.button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-        # GPIO.setup(self.pinA, GPIO.IN)
-        # GPIO.setup(self.pinB, GPIO.IN)
-        # GPIO.setup(self.button, GPIO.IN)
+        GPIO.setup(self.pinA, GPIO.IN)
+        GPIO.setup(self.pinB, GPIO.IN)
+        GPIO.setup(self.button, GPIO.IN)
 
-        GPIO.setup(self.vol.interuptPin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-        # # Add event detection to the GPIO inputs
-        # GPIO.add_event_detect(self.pinA, GPIO.FALLING, callback=self.switch_event)
-        # GPIO.add_event_detect(self.pinB, GPIO.FALLING, callback=self.switch_event)
-        # GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event) #, bouncetime=0)
-
-        GPIO.add_event_detect(self.vol.interuptPin, GPIO.BOTH, callback=self.button_event) #, bouncetime=0)
+        # Add event detection to the GPIO inputs
+        GPIO.add_event_detect(self.pinA, GPIO.FALLING, callback=self.switch_event)
+        GPIO.add_event_detect(self.pinB, GPIO.FALLING, callback=self.switch_event)
+        GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event) #, bouncetime=0)
 
 
     def switch_event(self, pin):
@@ -102,8 +68,8 @@ class RotaryEncoder:
 
     # Push button up event
     def button_event(self,button):
-        print "RotaryEncoder.button_event> pin", button
-        if self.vol.port[self.vol.Button]:
+        # print "RotaryEncoder.button_event> GPIO", button
+        if self.getSwitchState(self.button):
         	event = self.BUTTONUP
         else:
         	event = self.BUTTONDOWN
@@ -144,8 +110,22 @@ class RotaryEncoder:
 
 # End of RotaryEncoder class
 
+count=0
 def buttonpress(a):
-    print "Buttonpress ", a
+    global count
+
+    if a == RotaryEncoder.CLOCKWISE:
+        count +=1
+        ev = 'Clockwise'
+    elif a == RotaryEncoder.ANTICLOCKWISE:
+        count -=1
+        ev = 'Anti-clockwise'
+    elif a == RotaryEncoder.BUTTONUP:
+        ev = 'Button up'
+    elif a == RotaryEncoder.BUTTONDOWN:
+        ev = 'Button down'
+
+    print "Rot enc event ", ev , count
 
 def main():
     '''
