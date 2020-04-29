@@ -3,12 +3,12 @@
  preDAC preamplifier project
 
  Process Audio class
-    - provides a fulkl alsaaudio interface
+    - provides a full alsaaudio interface
     - maniuplates audio packages
     - does Digital signal processing
     - uses alsaaudio package to control ADC and DAC
 
- baloothebear4 
+ baloothebear4
  v1 April 2020
 
 """
