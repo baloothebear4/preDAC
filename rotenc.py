@@ -13,6 +13,7 @@ import RPi.GPIO as GPIO
 import time, threading
 from   pcf8574 import PCF8574
 
+""" need to move this class into the hw interface package """
 class Volume(PCF8574):
     i2c_port = 1
     address  = 0x20
