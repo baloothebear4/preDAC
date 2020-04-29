@@ -1,6 +1,17 @@
-""" example file to test out alsaaudio package """
-# sudo apt-get install python-alsaaudio
+#!/usr/bin/env python
+"""
+ preDAC preamplifier project
 
+ Process Audio class
+    - provides a fulkl alsaaudio interface
+    - maniuplates audio packages
+    - does Digital signal processing
+    - uses alsaaudio package to control ADC and DAC
+
+ baloothebear4 
+ v1 April 2020
+
+"""
 
 import alsaaudio, struct, time, math
 import numpy as np

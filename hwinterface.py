@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 """
+ preDAC preamplifier project
+
  HW interface class
     - controls the interaction with the HW driver objects:
         volumeBoard
@@ -7,10 +9,9 @@
         controlBoard
         controllerKnob
 
- Part of mVista preDAC
-
- Baloothebear4 Sept 17
-
+ Baloothebear4
+ v1 Sept 17
+ v2 Apr  20 - new Audio & Control HW
 
 """
 

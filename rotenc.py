@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 """
- 2nd version of Rotary Encoder class
+ preDAC preamplifier project
 
- Uses locks to ensure that timing issues do not create additional bounces
+ Rotary Encoder class
 
- Baloothebear4 April 2020
+     2nd version of Rotary Encoder class
+     Uses locks to ensure that timing issues do not create additional bounces
 
+ baloothebear4
+ v1 Sept  2017
+ v2 April 2020 - new Audio & Volume board HW
 
 """
 
