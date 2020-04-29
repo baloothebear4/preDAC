@@ -1,5 +1,15 @@
 #!/usr/bin/env python
+"""
+    preDAC Test harness
 
+    Main test harness for testing the preDAC HW
+    uses the core classes and wraps in a user interface
+    for testing the HW board
+
+    baloothebear4 April 2020
+
+"""
+    
 from smbus2 import SMBus
 import time, sys
 import struct, math
