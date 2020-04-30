@@ -6,7 +6,7 @@ preDAC Test harness
     uses the core classes and wraps in a user interface
     for testing the HW board
 
-baloothebear4 
+baloothebear4
 v1 April 2020
 
 """
@@ -110,9 +110,9 @@ class OLEDbar():
     def test_oled4(self):
         with self.regulator:
             with canvas(self.device) as c:
-                OLED.draw_bar2(c,1,1)
-                OLED.draw_bar2(c,3,10)
-                OLED.draw_bar2(c,25,32)
+                OLEDbar.draw_bar2(c,1,1)
+                OLEDbar.draw_bar2(c,3,10)
+                OLEDbar.draw_bar2(c,25,32)
 
 
 
@@ -175,12 +175,13 @@ def main():
     '''
 
     OLED = OLEDbar()
-    V   = Volume()
-    V.test1()
-    V.blink()
+    OLED.test_oled2()
+    # V   = Volume()
+    # V.test1()
+    # V.blink()
     return
 
-    # OLED.test_oled2()
+
 
 
     proc = processaudio.ProcessAudio()
