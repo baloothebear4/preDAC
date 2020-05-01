@@ -27,6 +27,7 @@ from luma.core.sprite_system import framerate_regulator
 import processaudio
 from rotenc import RotaryEncoder
 from pcf8574 import PCF8574
+from hwinterface import AudioBoard
 
 
 class OLEDbar():
@@ -139,61 +140,6 @@ class OLEDbar():
                 OLEDbar.draw_bar2(c,3,10)
                 OLEDbar.draw_bar2(c,25,32)
 
-class Source(PCF8574):
-    i2c_port = 1
-    address  = 0x21
-
-    mute_in  = 0
-    dBout32  = 1
-    dBout16  = 2
-    dBout8   = 3
-    dBout4   = 4
-    dBout2   = 5
-    dBout1   = 6
-    testLEDout = 0
-
-    def __init__(self):
-        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
-
-class Volume(PCF8574):
-    i2c_port = 1
-    address  = 0x21
-    mute_in  = 0
-    dBout32  = 1
-    dBout16  = 2
-    dBout8   = 3
-    dBout4   = 4
-    dBout2   = 5
-    dBout1   = 6
-    testLEDout = 0
-
-    def __init__(self):
-        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
-
-    def printPorts(self):
-        print "Volume.printPorts> ", self.port
-
-    def test1(self):
-        for i in range (0,8):
-            self.port[i]= True
-            print "set pin ", i , ' read ', self.port[i]
-            time.sleep(1)
-            self.printPorts()
-            self.port[i]= False
-
-    def test(self,i):
-        self.send(i)
-        a = self.read()
-        print "send ", i , ' read ', a
-
-
-    def blink(self):
-        for _ in range(10):
-            self.port[Volume.testLEDout]= True
-            self.printPorts()
-            time.sleep(1)
-            self.port[Volume.testLEDout]= False
-            self.printPorts()
 
 
 loops = 0
@@ -208,16 +154,20 @@ def testdata(a):
     # print d
     return d
 
-count=0
+MAX = 8
+MIN = 1
+count=MIN
 mute = True
+new = False
+
 def buttonpress(a):
-    global count,mute
+    global count,mute, MAX, MIN
 
     if a == RotaryEncoder.CLOCKWISE:
-        count +=1
+        if count < MAX: count +=1
         ev = 'Clockwise'
     elif a == RotaryEncoder.ANTICLOCKWISE:
-        count -=1
+        if count > MIN: count -=1
         ev = 'Anti-clockwise'
     elif a == RotaryEncoder.BUTTONUP:
         ev = 'Button up'
@@ -225,6 +175,7 @@ def buttonpress(a):
         ev = 'Button down'
         mute = not mute
 
+    new = True
     print "Rot enc event ", ev , count, mute
 
 
@@ -236,7 +187,9 @@ def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
-    global mute
+    global mute, new
+    audio = AudioBoard()
+    logic = audio.chLogic()
     OLED = OLEDbar()
     r = RotaryEncoder(pinA, pinB, button, buttonpress)
     # OLED.test_oled2()
@@ -252,7 +205,10 @@ def main():
 
     while(loops<1000):
         start = time.time()
-        OLED.draw_status(count,3,mute,True,True)
+        if new:
+            audio.SetSource(logic[count])
+            OLED.draw_status(0,count,mute,True,True)
+            new = False
         loops += 1
         time.sleep(.05)
     return

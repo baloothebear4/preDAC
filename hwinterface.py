@@ -15,63 +15,75 @@
 
 """
 
-
-from volumeboard import VolumeBoard
-from rotary_class import RotaryEncoder
+from rotenc import RotaryEncoder
+from pcf8574 import PCF8574
 
 import RPi.GPIO as GPIO
 import os, time, socket
 
 class AudioBoard:  #subclass so that there is only 1 interface point to all the HW classes
-                # name         logicalposition, pin ref
-    audioBoardMap = { 'mute'    : [ 0,                5],
-                      'streamer': [ 0,               20],
-                      'rec'     : [ 1,               26],
-                      'cd'      : [ 2,               16],
-                      'dac'     : [ 3,               13],
-                      'aux'     : [ 4,               12],
-                      'phono'   : [ 5,                6]
+    """                source   board relay,   i2c1 pin ref, gain state, text """
+    audioBoardMap = { 'tape'    : [ 1,               3,  False, 'tape'],
+                      'cd'      : [ 2,               2,  False, 'cd'],
+                      'dac'     : [ 3,               1,  False, 'dac'],
+                      'aux'     : [ 4,               0,  False, 'aux'],
+                      'phono'   : [ 5,               4,  True,  'phono'],
+                      'streamer': [ 6,               5,  False, 'streamer'],
+                      'mute'    : [ 7,               6,  False, 'mute'  ],
+                      'gain'    : [ 8,               7,  False, 'gain'  ]
                     }
-    POS    = 0   #index to the actualinput position on the Board
-    PIN    = 1   #index to the GPIO PIN to control this item
+    POS             = 0   #index to the actualinput position on the Board
+    PIN             = 1   #index to the I2C1 chip PIN to control this item
+    GAINSTATE       = 3
+    SOURCETEXT      = 4
 
-    OFF    = 0
-    ON     = 1
-    MUTE   = 0
-    UNMUTE = 1
+    OFF             = False
+    ON              = True
+    MUTE            = 0
+    UNMUTE          = 1
+
+    i2c1_port       = 1
+    address         = 0x21
 
     def __init__(self):
-        self.muteState    = AudioBoard.MUTE
-        self.active       = 'dac'
+        self.State  = {  'active' : 'dac',
+                         'mute'   : AudioBoard.MUTE,
+                         'gain'   : AudioBoard.OFF }
+        self.i2c1   = PCF8574.__init__(self, AudioBoard.i2c1_port, AudioBoard.address)
 
-        """ run through the sources and set up the GPIO pins"""
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        for p in AudioBoard.audioBoardMap:
-            GPIO.setup(  AudioBoard.audioBoardMap[p][AudioBoard.PIN], GPIO.OUT)
-            GPIO.output( AudioBoard.audioBoardMap[p][AudioBoard.PIN], AudioBoard.OFF)
+        """ run through the channels and set up the relays"""
+        for source, channel in AudioBoard.audioBoardMap:
+            print "AudioBoard.__init__> channel:", channel
+            self.i2c1.port[channel[AudioBoard.PIN]]=AudioBoard.OFF
 
         """ set up the default source and unmute """
-        self.setSource(self.active)
-        # self.unmute()
-        print "AudioBoard._init__ > ready"
+        self.setSource(self.State['active'])
+
+        print "AudioBoard._init__ > ready", self.i2c1
 
     def sourceLogic(self):
         logic = {}
         for s in AudioBoard.audioBoardMap:
             if s != 'mute':
                 logic.update({s: AudioBoard.audioBoardMap[s][AudioBoard.POS]})
-        # print "AudioBoard.sourceLogic > ", logic
+        print "AudioBoard.sourceLogic > ", logic
+        return logic
+
+    def chLogic(self):
+        logic = {}
+        for source, channel in AudioBoard.audioBoardMap:
+            logic.update({channel[AudioBoard.POS]: source})
+        print "AudioBoard.chLogic > ", logic
         return logic
 
     def setSource(self, source):
         """ Set the HW to switch on the source selected"""
-        GPIO.output(AudioBoard.audioBoardMap[self.active][AudioBoard.PIN], AudioBoard.OFF)
+        self.i2c1.port[ AudioBoard.audioBoardMap[self.State['active'],[AudioBoard.PIN] ]] = AudioBoard.OFF
         # print "AudioBoard.setSource >", self.active, AudioBoard.audioBoardMap[self.active][AudioBoard.PIN], AudioBoard.OFF
-        GPIO.output(AudioBoard.audioBoardMap[source][AudioBoard.PIN], AudioBoard.ON)
+        self.i2c1.port[ AudioBoard.audioBoardMap[self.State['active'],[AudioBoard.PIN] ]] = AudioBoard.ON
 
-        # print "AudioBoard.setSource > switch from ", self.active, "to source ", source
-        self.active = source
+        print "AudioBoard.setSource > switch from ", self.State['active'], "to source ", source
+        self.State['active'] = source
 
     def mute(self):
         """ Mute the audio board"""
@@ -95,7 +107,6 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
 
     def readAudioBoardMuteState(self):
         return self.muteState
-
 
 class ControlBoard:
     """
@@ -131,8 +142,6 @@ class ControlBoard:
     def poweroff(self,event=''):
         print "ControlBoard.poweroff ", event
         os.system("sudo poweroff")
-
-
 
     def controlKnobEvent(self, event):
         """  Callback routine to handle Control Knob events """
@@ -204,12 +213,9 @@ class RemoteController:
             #return "no", "key"
             pass
 
-from   pcf8574 import PCF8574
-
-""" need to move this class into the hw interface package """
-class Volume(PCF8574):
+class VolumeBoard(PCF8574):
     i2c_port = 1
-    address  = 0x20
+    i2c2_address  = 0x21
     mute_in  = 0
     dBout32  = 1
     dBout16  = 2
@@ -221,14 +227,31 @@ class Volume(PCF8574):
     interuptPin = 24 #pin 18
     Button      = 2
 
+    PIN_A        = 22 	# Pin 8
+    PIN_B        = 27	# Pin 10
+    BUTTON       = 17	# Pin 7
+
     def __init__(self):
-        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
+        PCF8574.__init__(self, VolumeBoard.i2c_port, VolumeBoard.i2c2_address)
         for i in range (0,8):
             print " port ", i , ' reads ', self.port[i]
             # time.sleep(0.1)
 
     def printPorts(self):
         print "Volume.printPorts> ", self.port
+
+    def test1(self):
+        for i in range (0,8):
+            self.port[i]= True
+            print "set pin ", i , ' read ', self.port[i]
+            time.sleep(1)
+            self.printPorts()
+            self.port[i]= False
+
+    def test(self,i):
+        self.send(i)
+        a = self.read()
+        print "send ", i , ' read ', a
 
 
 
