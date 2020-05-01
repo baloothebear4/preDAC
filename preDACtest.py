@@ -12,19 +12,20 @@ v1 April 2020
 """
 
 from smbus2 import SMBus
-import time, sys
+import time, sys, os
 import struct, math
 import numpy as np
 
 
 import datetime
-
+from PIL import ImageFont, Image
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
 from luma.oled.device import ssd1306
 from luma.core.sprite_system import framerate_regulator
 
 import processaudio
+from rotenc import RotaryEncoder
 from pcf8574 import PCF8574
 
 
@@ -38,10 +39,16 @@ class OLEDbar():
     bar_space   = bar_gap + bar_width
     bars        = oled_width / bar_space
 
+    def make_font(self, name, size):
+        font_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'fonts', name))
+        return ImageFont.truetype(font_path, size)
+
     def __init__(self):
         serial = i2c(port=1, address=0x3c)
         self.device = ssd1306(serial, height=32)
         self.device.persist = True
+        self.font = self.make_font("arial.ttf", 11)
         print "OLED all set. Max bars = ", OLEDbar.bars
         self.regulator = framerate_regulator(fps=60)
         self.readtime = []
@@ -60,6 +67,22 @@ class OLEDbar():
         x = col * OLEDbar.bar_space
         draw.rectangle((x, OLEDbar.oled_height-h, x + OLEDbar.bar_width, OLEDbar.bottom), outline="blue", fill="blue")
 
+    def draw_status(self, vol, source, mute, gain, headphonedetect):
+        """ simple dignostic to see the current source channel and volume setting """
+
+        states = ""
+        if mute: states+= "Mute - "
+        if gain: states+= "Gain - "
+        if headphonedetect: states+= "H/P detect"
+
+        self.calcDisplaytime()
+        with self.regulator:
+            with canvas(self.device) as draw:
+                draw.text((0,0), text='Volume -%2.1fdB' % (vol/2.0), fill="white", font=self.font)
+                draw.text((0,11),text='Channel %d' % source, fill="white",font=self.font)
+                draw.text((0,22),text=states, fill="white", font=self.font)
+
+        self.calcDisplaytime(False)
 
     def draw_screen(self,data):
         self.calcDisplaytime()
@@ -93,8 +116,10 @@ class OLEDbar():
         # time.sleep(4)
 
     def test_oled2(self):
+        print "OLED test full speed"
         with canvas(self.device) as draw:
             for j in range(OLEDbar.bars):
+                print "draw at col", j
                 for i in range(OLEDbar.oled_height):
                     self.draw_bar2(draw,j*OLEDbar.bar_space+4, i)
                     time.sleep(0.2)
@@ -118,7 +143,7 @@ class OLEDbar():
 
 class Volume(PCF8574):
     i2c_port = 1
-    address  = 0x20
+    address  = 0x21
     mute_in  = 0
     dBout32  = 1
     dBout16  = 2
@@ -138,7 +163,7 @@ class Volume(PCF8574):
         for i in range (0,8):
             self.port[i]= True
             print "set pin ", i , ' read ', self.port[i]
-            time.sleep(0.3)
+            time.sleep(1)
             self.printPorts()
             self.port[i]= False
 
@@ -169,18 +194,52 @@ def testdata(a):
     # print d
     return d
 
+count=0
+mute = True
+def buttonpress(a):
+    global count,mute
+
+    if a == RotaryEncoder.CLOCKWISE:
+        count +=1
+        ev = 'Clockwise'
+    elif a == RotaryEncoder.ANTICLOCKWISE:
+        count -=1
+        ev = 'Anti-clockwise'
+    elif a == RotaryEncoder.BUTTONUP:
+        ev = 'Button up'
+    elif a == RotaryEncoder.BUTTONDOWN:
+        ev = 'Button down'
+        mute = not mute
+
+    print "Rot enc event ", ev , count, mute
+
+
+
+
 def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
-
+    global mute
     OLED = OLEDbar()
-    OLED.test_oled2()
+    r = RotaryEncoder(buttonpress)
+    # OLED.test_oled2()
+    # for i in range(0,100):
+    #     OLED.draw_screen(testdata(i))
+    #     time.sleep(0.2)
+    # OLED.draw_status(45,3,True,True,True)
     # V   = Volume()
     # V.test1()
     # V.blink()
-    return
 
+    loops = 0
+
+    while(loops<1000):
+        start = time.time()
+        OLED.draw_status(count,3,mute,True,True)
+        loops += 1
+        time.sleep(.05)
+    return
 
 
 
