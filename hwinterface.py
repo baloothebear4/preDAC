@@ -23,14 +23,14 @@ import os, time, socket
 
 class AudioBoard:  #subclass so that there is only 1 interface point to all the HW classes
     """                source   board relay,   i2c1 pin ref, gain state, text """
-    audioBoardMap = { 'tape'    : [ 1,               3,  False, 'tape'],
-                      'cd'      : [ 2,               2,  False, 'cd'],
-                      'dac'     : [ 3,               1,  False, 'dac'],
-                      'aux'     : [ 4,               0,  False, 'aux'],
-                      'phono'   : [ 5,               4,  True,  'phono'],
-                      'streamer': [ 6,               5,  False, 'streamer'],
-                      'mute'    : [ 7,               6,  False, 'mute'  ],
-                      'gain'    : [ 8,               7,  False, 'gain'  ]
+    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'tape'],
+                      'cd'      : [ 2,               5,  False, 'cd'],
+                      'dac'     : [ 3,               6,  False, 'dac'],
+                      'aux'     : [ 4,               7,  False, 'aux'],
+                      'phono'   : [ 5,               3,  True,  'phono'],
+                      'streamer': [ 6,               2,  False, 'streamer'],
+                      'mute'    : [ 7,               1,  False, 'mute'  ],
+                      'gain'    : [ 8,               0,  False, 'gain'  ]
                     }
     POS             = 0   #index to the actualinput position on the Board
     PIN             = 1   #index to the I2C1 chip PIN to control this item
@@ -39,74 +39,74 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
 
     OFF             = False
     ON              = True
-    MUTE            = 0
-    UNMUTE          = 1
+    MUTE            = OFF
+    UNMUTE          = ON
 
     i2c1_port       = 1
-    address         = 0x21
+    address         = 0x20
 
     def __init__(self):
         self.State  = {  'active' : 'dac',
                          'mute'   : AudioBoard.MUTE,
                          'gain'   : AudioBoard.OFF }
-        self.i2c1   = PCF8574.__init__(self, AudioBoard.i2c1_port, AudioBoard.address)
+        self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
 
         """ run through the channels and set up the relays"""
-        for source, channel in AudioBoard.audioBoardMap:
-            print "AudioBoard.__init__> channel:", channel
-            self.i2c1.port[channel[AudioBoard.PIN]]=AudioBoard.OFF
+        for source in AudioBoard.audioBoardMap:
+            print "AudioBoard.__init__> channel:", AudioBoard.audioBoardMap[source]
+            self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] =AudioBoard.OFF
 
         """ set up the default source and unmute """
         self.setSource(self.State['active'])
 
-        print "AudioBoard._init__ > ready", self.i2c1
+        print "AudioBoard._init__ > ready", self.i2c1.port
 
     def sourceLogic(self):
         logic = {}
         for s in AudioBoard.audioBoardMap:
-            if s != 'mute':
+            if s != 'mute' and s != 'gain':
                 logic.update({s: AudioBoard.audioBoardMap[s][AudioBoard.POS]})
         print "AudioBoard.sourceLogic > ", logic
         return logic
 
     def chLogic(self):
         logic = {}
-        for source, channel in AudioBoard.audioBoardMap:
-            logic.update({channel[AudioBoard.POS]: source})
+        for source in AudioBoard.audioBoardMap:
+            logic.update({AudioBoard.audioBoardMap[source][AudioBoard.POS]: source})
         print "AudioBoard.chLogic > ", logic
         return logic
 
     def setSource(self, source):
         """ Set the HW to switch on the source selected"""
-        self.i2c1.port[ AudioBoard.audioBoardMap[self.State['active'],[AudioBoard.PIN] ]] = AudioBoard.OFF
-        # print "AudioBoard.setSource >", self.active, AudioBoard.audioBoardMap[self.active][AudioBoard.PIN], AudioBoard.OFF
-        self.i2c1.port[ AudioBoard.audioBoardMap[self.State['active'],[AudioBoard.PIN] ]] = AudioBoard.ON
-
-        print "AudioBoard.setSource > switch from ", self.State['active'], "to source ", source
+        self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['active']][AudioBoard.PIN] ] = AudioBoard.OFF
+        self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
         self.State['active'] = source
+        
+        print "AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port
+
 
     def mute(self):
         """ Mute the audio board"""
-        self.muteState    = AudioBoard.MUTE
-        GPIO.output(AudioBoard.audioBoardMap['mute'][AudioBoard.PIN], AudioBoard.MUTE)
-        # print "AudioBoard.mute "
+        self.State['mute'] = AudioBoard.MUTE
+        self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.MUTE
+        print "AudioBoard.mute "
 
     def unmute(self):
         """ unmute the audio board"""
-        self.muteState    = AudioBoard.UNMUTE
-        GPIO.output(AudioBoard.audioBoardMap['mute'][AudioBoard.PIN], AudioBoard.UNMUTE)
-        # print "AudioBoard.unmute "
+        self.State['mute'] = AudioBoard.UNMUTE
+        self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.UNMUTE
+        print "AudioBoard.unmute "
 
     def changeMute(self):
         """ unmute the audio board"""
-        if self.muteState == AudioBoard.MUTE:
+        if self.State['mute'] == AudioBoard.MUTE:
             self.unmute()
         else:
             self.mute()
-        # print "AudioBoard.togglemute "
+        print "AudioBoard.togglemute "
 
-    def readAudioBoardMuteState(self):
-        return self.muteState
+    def readAudioBoardState(self):
+        return self.State
 
 class ControlBoard:
     """

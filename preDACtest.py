@@ -158,10 +158,10 @@ MAX = 8
 MIN = 1
 count=MIN
 mute = True
-new = False
+new = True
 
 def buttonpress(a):
-    global count,mute, MAX, MIN
+    global count,mute, MAX, MIN, new
 
     if a == RotaryEncoder.CLOCKWISE:
         if count < MAX: count +=1
@@ -190,6 +190,8 @@ def main():
     global mute, new
     audio = AudioBoard()
     logic = audio.chLogic()
+    print "source logic:", audio.sourceLogic()
+
     OLED = OLEDbar()
     r = RotaryEncoder(pinA, pinB, button, buttonpress)
     # OLED.test_oled2()
@@ -206,11 +208,17 @@ def main():
     while(loops<1000):
         start = time.time()
         if new:
-            audio.SetSource(logic[count])
+            print "Count=", count, " source=", logic[count]
+            audio.setSource(logic[count])
+            if mute:
+                audio.mute()
+            else:
+                audio.unmute()
             OLED.draw_status(0,count,mute,True,True)
+            print "Audio board status ", audio.readAudioBoardState()
             new = False
         loops += 1
-        time.sleep(.05)
+        time.sleep(.5)
     return
 
 
