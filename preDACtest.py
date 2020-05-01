@@ -27,7 +27,7 @@ from luma.core.sprite_system import framerate_regulator
 import processaudio
 from rotenc import RotaryEncoder
 from pcf8574 import PCF8574
-from hwinterface import AudioBoard
+from hwinterface import AudioBoard, VolumeBoard
 
 
 class OLEDbar():
@@ -191,7 +191,11 @@ def main():
     audio = AudioBoard()
     logic = audio.chLogic()
     print "source logic:", audio.sourceLogic()
-    r = RotaryEncoder(pinA, pinB, button, buttonpress)
+    
+    # r = RotaryEncoder(pinA, pinB, button, buttonpress)
+
+    """ Volume knob test code """
+    v = VolumeBoard()
 
 
     OLED = OLEDbar()
@@ -206,23 +210,28 @@ def main():
 
     loops = 0
 
-    while(loops<1000):
-        start = time.time()
-        if new:
-            print "Count=", count, " source=", logic[count]
-            audio.setSource(logic[count])
-            if mute:
-                audio.mute()
-            else:
-                audio.unmute()
+    # while(loops<1000):
+    #     start = time.time()
+    #     if new:
+    #         print "Count=", count, " source=", logic[count]
+    #         audio.setSource(logic[count])
+    #         if mute:
+    #             audio.mute()
+    #         else:
+    #             audio.unmute()
+    #         status = audio.readAudioBoardState()
+    #         OLED.draw_status(0,'%d = %s' %(count, logic[count]),status['mute'], status['gain'], status['phonesdetect'])
+    #         print "Audio board status ", audio.readAudioBoardState()
+    #         new = False
+    #     loops += 1
+    #     time.sleep(.5)
+    # return
+    while True:
+        if v.detectVolChange():
             status = audio.readAudioBoardState()
-            OLED.draw_status(0,'%d = %s' %(count, logic[count]),status['mute'], status['gain'], status['phonesdetect'])
-            print "Audio board status ", audio.readAudioBoardState()
-            new = False
-        loops += 1
-        time.sleep(.5)
-    return
+            OLED.draw_status( v.readVolume(),'%d = %s' %(count, logic[count]),status['mute'], status['gain'], status['phonesdetect'])
 
+        time.sleep(0.1)
 
 
     proc = processaudio.ProcessAudio()

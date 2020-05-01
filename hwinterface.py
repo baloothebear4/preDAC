@@ -282,12 +282,15 @@ class VolumeBoard(PCF8574):
             print "**MUTE / UNMUTE detected - not implemented**" # need to test out how performance works - can this be done in the interrupt?
 
         # if self.demandVolume == 0: self.demandVolume = 1
-        print "VolumeBoard.volKnobEvent >", ev
+        print "VolumeBoard.volKnobEvent >", ev, self.demandVolume
 
     def detectVolChange(self):
         """ use as part of the main loop to detect and implement volume changes """
         if self.Volume <> self.demandVolume:
             self.setVolume(self.demandVolume)
+            return True
+        else:
+            return False
 
     def setVolume(self, volume):
         """ algorithm to set the volume steps in a make before break sequence to reduce clicks
@@ -310,6 +313,8 @@ class VolumeBoard(PCF8574):
         self.Volume = volume
         print "VolumeBoard.setVolume> demand %d, volume %d, \nsteps %s, \nports %s" % (self.demandVolume, self.Volume, relays, self.i2c2.port)
 
+    def readVolume(self):
+        return self.Volume
 
 
 class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #subclass so that there is only 1 interface point to all the HW classes
