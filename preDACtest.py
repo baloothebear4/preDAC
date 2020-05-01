@@ -139,7 +139,21 @@ class OLEDbar():
                 OLEDbar.draw_bar2(c,3,10)
                 OLEDbar.draw_bar2(c,25,32)
 
+class Source(PCF8574):
+    i2c_port = 1
+    address  = 0x21
 
+    mute_in  = 0
+    dBout32  = 1
+    dBout16  = 2
+    dBout8   = 3
+    dBout4   = 4
+    dBout2   = 5
+    dBout1   = 6
+    testLEDout = 0
+
+    def __init__(self):
+        PCF8574.__init__(self, Volume.i2c_port, Volume.address)
 
 class Volume(PCF8574):
     i2c_port = 1
