@@ -244,20 +244,22 @@ class VolumeBoard(PCF8574):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 20
+    DEFAULT_VOL  = 1
 
     """ Map of the volume relay step to the i2c pin """
-    RELAYMAP     = ( -1, 3, 2, 1, 7, 6, 5, 4)
+    # RELAYMAP     = ( 3, 2, 1, 7, 6, 5, 4)
+    # RELAYMAP     = ( 7, 1, 2, 3, 6, 5, 4)
+    RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
 
     def __init__(self):
         self.i2c2         = PCF8574(VolumeBoard.i2c2_port, VolumeBoard.i2c2_address)
-        self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_A, VolumeBoard.PIN_A, )
+        self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_B, VolumeBoard.BUTTON, self.volKnobEvent )
         self.demandVolume = VolumeBoard.DEFAULT_VOL
         self.Volume       = VolumeBoard.DEFAULT_VOL
 
         """ run through the channels and set up the relays"""
-        for step in range(VolumeBoard.VOLUMESTEPS):
-            self.i2c2.port[ VolumeBoard.VolumeBoardMap[step] ] = VolumeBoard.OFF
+        for i in range(len(self.i2c2.port)):
+            self.i2c2.port[ i ] = VolumeBoard.OFF
 
         """ set up the default volume """
         self.setVolume(VolumeBoard.DEFAULT_VOL)
@@ -279,6 +281,7 @@ class VolumeBoard(PCF8574):
             ev = 'Button down'
             print "**MUTE / UNMUTE detected - not implemented**" # need to test out how performance works - can this be done in the interrupt?
 
+        # if self.demandVolume == 0: self.demandVolume = 1
         print "VolumeBoard.volKnobEvent >", ev
 
     def detectVolChange(self):
@@ -293,10 +296,12 @@ class VolumeBoard(PCF8574):
         """
         """ volume to relays: map integer into bits, map bits to i2c2 ports """
         relays = [False] * VolumeBoard.VOLUMESTEPS
-        mask   = 0x1
-        for i in range(relays):
-            relays[i] = volume | mask
-            mask << 1
+        mask   = 0x01
+        for i in range(VolumeBoard.VOLUMESTEPS):
+            print mask, volume & mask
+            relays[i] = (volume & mask == mask)
+            mask = mask << 1
+
 
         """ set the relays accordingly, NB: this does NOT attempt on/off optimisation """
         for i, r in enumerate(relays):
