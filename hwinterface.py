@@ -47,6 +47,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
 
     def __init__(self):
         self.State  = {  'active' : 'dac',
+                         'phonesdetect' : AudioBoard.OFF,
                          'mute'   : AudioBoard.MUTE,
                          'gain'   : AudioBoard.OFF }
         self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
@@ -81,7 +82,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['active']][AudioBoard.PIN] ] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
         self.State['active'] = source
-        
+
         print "AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port
 
 

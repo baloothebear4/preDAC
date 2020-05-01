@@ -80,7 +80,7 @@ class OLEDbar():
         with self.regulator:
             with canvas(self.device) as draw:
                 draw.text((0,0), text='Volume -%2.1fdB' % (vol/2.0), fill="white", font=self.font)
-                draw.text((0,11),text='Channel %d' % source, fill="white",font=self.font)
+                draw.text((0,11),text='Channel %s' % source, fill="white",font=self.font)
                 draw.text((0,22),text=states, fill="white", font=self.font)
 
         self.calcDisplaytime(False)
@@ -214,7 +214,8 @@ def main():
                 audio.mute()
             else:
                 audio.unmute()
-            OLED.draw_status(0,count,mute,True,True)
+            status = audio.readAudioBoardState()
+            OLED.draw_status(0,'%d = %s' %(count, logic[count]),status['mute'], status['gain'], status['phonesdetect'])
             print "Audio board status ", audio.readAudioBoardState()
             new = False
         loops += 1
