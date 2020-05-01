@@ -214,7 +214,9 @@ def buttonpress(a):
     print "Rot enc event ", ev , count, mute
 
 
-
+pinA = 26
+pinB = 16
+button = 13
 
 def main():
     '''
@@ -222,7 +224,7 @@ def main():
     '''
     global mute
     OLED = OLEDbar()
-    r = RotaryEncoder(buttonpress)
+    r = RotaryEncoder(pinA, pinB, button, buttonpress)
     # OLED.test_oled2()
     # for i in range(0,100):
     #     OLED.draw_screen(testdata(i))

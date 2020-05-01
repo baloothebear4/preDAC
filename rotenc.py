@@ -24,7 +24,7 @@ class RotaryEncoder:
     BUTTONUP=4
 
     # Initialise rotary encoder object
-    def __init__(self,callback):
+    def __init__(self, pinA, pinB, button, callback):
         self.pinA = 26
         self.pinB = 16
         self.button = 13
