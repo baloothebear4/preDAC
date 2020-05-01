@@ -41,21 +41,28 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
     ON              = True
     MUTE            = OFF
     UNMUTE          = ON
+    PHONES_IN       = 0
 
     i2c1_port       = 1
     address         = 0x20
+    PHONESDETECTPIN = 12
 
     def __init__(self):
-        self.State  = {  'active' : 'dac',
+        self.State  = {  'active'       : 'dac',
                          'phonesdetect' : AudioBoard.OFF,
-                         'mute'   : AudioBoard.MUTE,
-                         'gain'   : AudioBoard.OFF }
+                         'mute'         : AudioBoard.MUTE,
+                         'gain'         : AudioBoard.OFF }
         self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
 
         """ run through the channels and set up the relays"""
         for source in AudioBoard.audioBoardMap:
             print "AudioBoard.__init__> channel:", AudioBoard.audioBoardMap[source]
-            self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] =AudioBoard.OFF
+            self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.OFF
+
+        """ setup the headphones insert detect control """
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(AudioBoard.PHONESDETECTPIN, GPIO.IN)
+        GPIO.add_event_detect(AudioBoard.PHONESDETECTPIN, GPIO.BOTH, callback=self.phonesdetect)
 
         """ set up the default source and unmute """
         self.setSource(self.State['active'])
@@ -105,6 +112,15 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         else:
             self.mute()
         print "AudioBoard.togglemute "
+
+    def phonesdetect(self):
+        """ phonesdetect pin has triggered an interupt """
+        if GPIO.input(AudioBoard.PHONESDETECTPIN) == AudioBoard.PHONES_IN:
+            self.State['phonesdetect'] = True
+            print "AudioBoard.phonesdetect> Headphones insert detected"
+        else:
+            self.State['phonesdetect'] = False
+            print "AudioBoard.phonesdetect> Headphones removed"
 
     def readAudioBoardState(self):
         return self.State
@@ -215,44 +231,79 @@ class RemoteController:
             pass
 
 class VolumeBoard(PCF8574):
-    i2c_port = 1
-    i2c2_address  = 0x21
-    mute_in  = 0
-    dBout32  = 1
-    dBout16  = 2
-    dBout8   = 3
-    dBout4   = 4
-    dBout2   = 5
-    dBout1   = 6
-    testLEDout = 0
-    interuptPin = 24 #pin 18
-    Button      = 2
+    i2c2_port    = 1
+    i2c2_address = 0x21
+    OFF          = False
+    ON           = True
 
-    PIN_A        = 22 	# Pin 8
-    PIN_B        = 27	# Pin 10
-    BUTTON       = 17	# Pin 7
+    """ Volume Control Rotary Encoder on the Volume Board """
+    PIN_A        = 26
+    PIN_B        = 16
+    BUTTON       = 13
+
+    VOLUMESTEPS  = 7
+    MIN_VOLUME   = 0
+    MAX_VOLUME   = 127   #""" NB: this is 2xdB """
+    DEFAULT_VOL  = 20
+
+    """ Map of the volume relay step to the i2c pin """
+    RELAYMAP     = ( -1, 3, 2, 1, 7, 6, 5, 4)
 
     def __init__(self):
-        PCF8574.__init__(self, VolumeBoard.i2c_port, VolumeBoard.i2c2_address)
-        for i in range (0,8):
-            print " port ", i , ' reads ', self.port[i]
-            # time.sleep(0.1)
+        self.i2c2         = PCF8574(VolumeBoard.i2c2_port, VolumeBoard.i2c2_address)
+        self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_A, VolumeBoard.PIN_A, )
+        self.demandVolume = VolumeBoard.DEFAULT_VOL
+        self.Volume       = VolumeBoard.DEFAULT_VOL
 
-    def printPorts(self):
-        print "Volume.printPorts> ", self.port
+        """ run through the channels and set up the relays"""
+        for step in range(VolumeBoard.VOLUMESTEPS):
+            self.i2c2.port[ VolumeBoard.VolumeBoardMap[step] ] = VolumeBoard.OFF
 
-    def test1(self):
-        for i in range (0,8):
-            self.port[i]= True
-            print "set pin ", i , ' read ', self.port[i]
-            time.sleep(1)
-            self.printPorts()
-            self.port[i]= False
+        """ set up the default volume """
+        self.setVolume(VolumeBoard.DEFAULT_VOL)
 
-    def test(self,i):
-        self.send(i)
-        a = self.read()
-        print "send ", i , ' read ', a
+        print "VolumeBoard._init__ > ready", self.i2c2.port
+
+    def volKnobEvent(self, a):
+        """ callback if the vol knob is turned or the button is pressed """
+        """ ** Need to decide whether the volume write can be done in the interrupt? """
+        if a == RotaryEncoder.CLOCKWISE:
+            if self.demandVolume < VolumeBoard.MAX_VOLUME: self.demandVolume +=1
+            ev = 'Clockwise'
+        elif a == RotaryEncoder.ANTICLOCKWISE:
+            if self.demandVolume > VolumeBoard.MIN_VOLUME: self.demandVolume -=1
+            ev = 'Anti-clockwise'
+        elif a == RotaryEncoder.BUTTONUP:
+            ev = 'Button up'
+        elif a == RotaryEncoder.BUTTONDOWN:
+            ev = 'Button down'
+            print "**MUTE / UNMUTE detected - not implemented**" # need to test out how performance works - can this be done in the interrupt?
+
+        print "VolumeBoard.volKnobEvent >", ev
+
+    def detectVolChange(self):
+        """ use as part of the main loop to detect and implement volume changes """
+        if self.Volume <> self.demandVolume:
+            self.setVolume(self.demandVolume)
+
+    def setVolume(self, volume):
+        """ algorithm to set the volume steps in a make before break sequence to reduce clicks
+            1. need to convert the demand volume into pattern of relays to switch
+            2. need to go through a pattern of turn on's, then turn off's to minimise clicks
+        """
+        """ volume to relays: map integer into bits, map bits to i2c2 ports """
+        relays = [False] * VolumeBoard.VOLUMESTEPS
+        mask   = 0x1
+        for i in range(relays):
+            relays[i] = volume | mask
+            mask << 1
+
+        """ set the relays accordingly, NB: this does NOT attempt on/off optimisation """
+        for i, r in enumerate(relays):
+            self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = r
+
+        self.Volume = volume
+        print "VolumeBoard.setVolume> demand %d, volume %d, \nsteps %s, \nports %s" % (self.demandVolume, self.Volume, relays, self.i2c2.port)
 
 
 
@@ -271,9 +322,18 @@ if __name__ == '__main__':
     from events import Events
     e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
 
+    """ ir controller test code
     irRemote = RemoteController(e)
 
     while True:
         keyname, updown = irRemote.checkRemoteKeyPress()
         if keyname != "no":
             print('%s (%s)' % (keyname, updown))
+    """
+
+    """ Volume knob test code """
+    v = VolumeBoard()
+
+    while True:
+        v.detectVolChange()
+        time.sleep(0.1)

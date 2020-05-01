@@ -191,9 +191,10 @@ def main():
     audio = AudioBoard()
     logic = audio.chLogic()
     print "source logic:", audio.sourceLogic()
+    r = RotaryEncoder(pinA, pinB, button, buttonpress)
+
 
     OLED = OLEDbar()
-    r = RotaryEncoder(pinA, pinB, button, buttonpress)
     # OLED.test_oled2()
     # for i in range(0,100):
     #     OLED.draw_screen(testdata(i))

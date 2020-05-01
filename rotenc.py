@@ -18,24 +18,22 @@ import time, threading
 
 class RotaryEncoder:
 
-    CLOCKWISE=1
-    ANTICLOCKWISE=2
-    BUTTONDOWN=3
-    BUTTONUP=4
+    NOEVENT         = 0
+    CLOCKWISE       = 1
+    ANTICLOCKWISE   = 2
+    BUTTONDOWN      = 3
+    BUTTONUP        = 4
 
     # Initialise rotary encoder object
     def __init__(self, pinA, pinB, button, callback):
-        self.pinA = 26
-        self.pinB = 16
-        self.button = 13
-        self.callback = callback
+        self.pinA       = pinA
+        self.pinB       = pinB
+        self.button     = button
+        self.callback   = callback
 
         # new
-        self.counter = 0
-        self.aState = 0
-        self.bState = 0
-        self.aLastState= 0
-        self.moved = 0  #track the current state
+        self.aState     = 0
+        self.bState     = 0
 
         self.LockRotary = threading.Lock()		# create lock for rotary switch
 
@@ -83,7 +81,7 @@ class RotaryEncoder:
         return  s
 
     def checkRotEnc(self, pin ):
-        event = 0
+        event = RotaryEncoder.NOEVENT
 
         if self.aState == self.rotary_a and self.bState == self.rotary_b:		# Same interrupt as before (Bouncing)?
             # print "bounce"
@@ -95,10 +93,8 @@ class RotaryEncoder:
         if self.rotary_a or self.rotary_b:						# Both one active? Yes -> end of sequence
             self.LockRotary.acquire()						# get lock
             if pin == self.pinB:							# Turning direction depends on
-                # Rotary_counter += 1						# which input gave last interrupt
                 event = RotaryEncoder.CLOCKWISE
             else:										# so depending on direction either
-                # Rotary_counter -= 1						# increase or decrease counter
                 event = RotaryEncoder.ANTICLOCKWISE
             self.LockRotary.release()						# and release lock
 
