@@ -50,7 +50,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
     def __init__(self):
         self.State  = {  'active'       : 'dac',
                          'phonesdetect' : AudioBoard.OFF,
-                         'mute'         : AudioBoard.MUTE,
+                         'mute'         : AudioBoard.OFF,
                          'gain'         : AudioBoard.OFF }
         self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
 
@@ -88,28 +88,28 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         """ Set the HW to switch on the source selected"""
         self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['active']][AudioBoard.PIN] ] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
-        self.State['active'] = source
 
         print "AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port
-
+        print "AudioBoard.setSource > status: ", self.State
+        self.State['active'] = source
 
     def mute(self):
         """ Mute the audio board"""
-        self.State['mute'] = AudioBoard.MUTE
+        self.State['mute'] = AudioBoard.ON
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.MUTE
         print "AudioBoard.mute "
 
     def unmute(self):
         """ unmute the audio board"""
-        self.State['mute'] = AudioBoard.UNMUTE
+        self.State['mute'] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.UNMUTE
         print "AudioBoard.unmute "
 
-    def changeMute(self):
+    def toggleMute(self, volume):
         """ unmute the audio board"""
-        if self.State['mute'] == AudioBoard.MUTE:
+        if self.State['mute'] == AudioBoard.ON and volume > 0:
             self.unmute()
-        else:
+        elif self.State['mute'] == AudioBoard.OFF and volume == 0:
             self.mute()
         print "AudioBoard.togglemute "
 
@@ -244,7 +244,7 @@ class VolumeBoard(PCF8574):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 1
+    DEFAULT_VOL  = 20
 
     """ Map of the volume relay step to the i2c pin """
     # RELAYMAP     = ( 3, 2, 1, 7, 6, 5, 4)
@@ -256,6 +256,8 @@ class VolumeBoard(PCF8574):
         self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_B, VolumeBoard.BUTTON, self.volKnobEvent )
         self.demandVolume = VolumeBoard.DEFAULT_VOL
         self.Volume       = VolumeBoard.DEFAULT_VOL
+        self.premuteVolume= VolumeBoard.DEFAULT_VOL
+        self.ev           = "none"
 
         """ run through the channels and set up the relays"""
         for i in range(len(self.i2c2.port)):
@@ -271,18 +273,24 @@ class VolumeBoard(PCF8574):
         """ ** Need to decide whether the volume write can be done in the interrupt? """
         if a == RotaryEncoder.CLOCKWISE:
             if self.demandVolume < VolumeBoard.MAX_VOLUME: self.demandVolume +=1
-            ev = 'Clockwise'
+            self.ev = 'Clockwise'
         elif a == RotaryEncoder.ANTICLOCKWISE:
             if self.demandVolume > VolumeBoard.MIN_VOLUME: self.demandVolume -=1
-            ev = 'Anti-clockwise'
+            self.ev = 'Anti-clockwise'
         elif a == RotaryEncoder.BUTTONUP:
-            ev = 'Button up'
+            self.ev = 'Button up'
         elif a == RotaryEncoder.BUTTONDOWN:
-            ev = 'Button down'
-            print "**MUTE / UNMUTE detected - not implemented**" # need to test out how performance works - can this be done in the interrupt?
+            self.ev = 'Button down'
+            if self.Volume == VolumeBoard.MIN_VOLUME:
+                # unmute
+                self.demandVolume = self.premuteVolume
+            else:
+                # mute
+                self.premuteVolume = self.Volume
+                self.demandVolume = VolumeBoard.MIN_VOLUME
 
         # if self.demandVolume == 0: self.demandVolume = 1
-        print "VolumeBoard.volKnobEvent >", ev, self.demandVolume
+        print "VolumeBoard.volKnobEvent >", self.ev, self.demandVolume
 
     def detectVolChange(self):
         """ use as part of the main loop to detect and implement volume changes """
@@ -291,6 +299,15 @@ class VolumeBoard(PCF8574):
             return True
         else:
             return False
+
+    def detectMuteChange(self):
+        """ use as part of the main loop to detect and implement volume changes """
+        if self.ev == 'Button down' and self.demandVolume == VolumeBoard.MIN_VOLUME:
+            return 'mute'
+        elif self.ev == 'Button down' and self.demandVolume <> VolumeBoard.MIN_VOLUME:
+            return 'unmute'
+        else:
+            return 'false'
 
     def setVolume(self, volume):
         """ algorithm to set the volume steps in a make before break sequence to reduce clicks

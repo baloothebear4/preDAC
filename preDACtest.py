@@ -79,7 +79,7 @@ class OLEDbar():
         self.calcDisplaytime()
         with self.regulator:
             with canvas(self.device) as draw:
-                draw.text((0,0), text='Volume -%2.1fdB' % (vol/2.0), fill="white", font=self.font)
+                draw.text((0,0), text='Volume %2.1fdB' % (vol/2.0), fill="white", font=self.font)
                 draw.text((0,11),text='Channel %s' % source, fill="white",font=self.font)
                 draw.text((0,22),text=states, fill="white", font=self.font)
 
@@ -142,6 +142,32 @@ class OLEDbar():
 
 
 
+#-----------------------------------------------------------------------
+# Get a character from the keyboard.  If Block is True wait for input,
+# else return any available character or throw an exception if none is
+# available.  Ctrl+C isn't handled and continues to generate the usual
+# SIGINT signal, but special keys like the arrows return the expected
+# escape sequences.
+#
+# This requires:
+#
+#    import sys, select
+#
+# This was tested using python 2.7 on Mac OS X.  It will work on any
+# Linux system, but will likely fail on Windows due to select/stdin
+# limitations.
+#-----------------------------------------------------------------------
+
+import sys, select
+def GetLine():
+    while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        line = sys.stdin.readline()
+        if line:
+          return line[:-1]
+        else: # an empty line means stdin has been closed
+          return False
+
+
 loops = 0
 BinCount = 24
 BlockSize = 32
@@ -187,11 +213,15 @@ def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
+
     global mute, new
     audio = AudioBoard()
     logic = audio.chLogic()
-    print "source logic:", audio.sourceLogic()
-    
+    chlogic = audio.sourceLogic()
+    status = audio.readAudioBoardState()
+    ch    = chlogic[status['active']]
+    print ">> active channel:", ch, "=", status['active']
+
     # r = RotaryEncoder(pinA, pinB, button, buttonpress)
 
     """ Volume knob test code """
@@ -226,13 +256,28 @@ def main():
     #     loops += 1
     #     time.sleep(.5)
     # return
-    while True:
-        if v.detectVolChange():
-            status = audio.readAudioBoardState()
-            OLED.draw_status( v.readVolume(),'%d = %s' %(count, logic[count]),status['mute'], status['gain'], status['phonesdetect'])
 
+    chchanged = True   # display status first time around
+    while True:
+
+        line = GetLine()
+        if line == "q":
+            return
+        elif line >= '1' and line <= '6':
+            ch = int(line)
+            print "Channel=", ch, " source=", logic[ch]
+            audio.setSource(logic[ch])
+            chchanged = True
+
+        if v.detectVolChange() or chchanged:
+            vol    = v.readVolume()
+            audio.toggleMute(vol)
+            status = audio.readAudioBoardState()
+            OLED.draw_status( vol-127,'%d = %s' %(ch, logic[ch]),status['mute'], status['gain'], status['phonesdetect'])
+            chchanged = False
         time.sleep(0.1)
 
+    return
 
     proc = processaudio.ProcessAudio()
     loops = 0
