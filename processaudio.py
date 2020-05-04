@@ -54,23 +54,23 @@ class AudioData():
 
     def printPower(self, power, fCentre):
         # apply a frequency dependent filter
-        print "%6.1f @f=%-5d %s" % (power, fCentre , "*"*int(self.filter(power, fCentre)))
+        print("%6.1f @f=%-5d %s" % (power, fCentre , "*"*int(self.filter(power, fCentre))))
 
     def seeData(self, data, title):
         line = "[%d] %s\n" % (len(data), title)
         for i in range(len(data)):
             line += "%6d "%data[i]
             if i % 16 == 15:
-                print line
+                print(line)
                 line = ""
 
     def _print(self):
-        print "Left Spectrum  >%s" % self.audio['SpectrumL']
-        print "Right Spectrum >%s" % self.audio['SpectrumR']
-        print "Left VU        >%f" % self.audio['VU_L']
-        print "Right VU       >%f" % self.audio['VU_R']
-        print "Left Peak      >%f" % self.audio['Peak_L']
-        print "Right Peak     >%f" % self.audio['Peak_R']
+        print("Left Spectrum  >%s" % self.audio['SpectrumL'])
+        print("Right Spectrum >%s" % self.audio['SpectrumR'])
+        print("Left VU        >%f" % self.audio['VU_L'])
+        print("Right VU       >%f" % self.audio['VU_R'])
+        print("Left Peak      >%f" % self.audio['Peak_L'])
+        print("Right Peak     >%f" % self.audio['Peak_R'])
 
 
 class ProcessAudio(AudioData):
@@ -92,7 +92,7 @@ class ProcessAudio(AudioData):
         # window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
         self.window = np.blackman(FRAMESIZE)
         self.createBands()
-        print "ProcessAudio: reading from soundcard ", self.recorder.cardname()
+        print("ProcessAudio: reading from soundcard ", self.recorder.cardname())
 
     def process(self):
         '''
@@ -103,7 +103,7 @@ class ProcessAudio(AudioData):
         datalen = 0
         while datalen < FRAMESIZE:
             datalen, raw_data    = self.recorder.read()
-            if datalen< 0: print 'ProcessAudio.process> *** datalen %d, buffer size %d' % (datalen, len(raw_data))
+            if datalen< 0: print('ProcessAudio.process> *** datalen %d, buffer size %d' % (datalen, len(raw_data)))
 
         while retry<5:
             try:
@@ -120,7 +120,7 @@ class ProcessAudio(AudioData):
                 break
 
             except Exception as e:
-                print "Failed decode ", e
+                print("Failed decode ", e)
                 retry += 1
 
         # self.calcReadtime(False)
@@ -133,7 +133,7 @@ class ProcessAudio(AudioData):
         self.octave         = spacing
         self.firstfreq      = fcentre
         self.intervalUpperF = []
-        print "ProcessAudio.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre)
+        print("ProcessAudio.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre))
         #
         # Loop in octaves bands
         #
@@ -160,7 +160,7 @@ class ProcessAudio(AudioData):
             startbin = bincount+1
 
 
-        print "  %d bands determined\n" % (len(self.intervalUpperF))
+        print("  %d bands determined\n" % (len(self.intervalUpperF)))
         return self.intervalUpperF
 
     def VU(self,data):
@@ -182,7 +182,7 @@ class ProcessAudio(AudioData):
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            print 'ProcessAudio:calcReadtime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1])
+            print('ProcessAudio:calcReadtime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
 
 
     def calcDCoffset(self, data):
@@ -204,7 +204,7 @@ class ProcessAudio(AudioData):
 
         for i in range(0, len(r1)):
             if r1[i] == p: break
-        print "peak power %2dHz=%2.1f: bin %d.  DCoffset = %f" % (i*BINBANDWIDTH, p, i, self.dcoffset)
+        print("peak power %2dHz=%2.1f: bin %d.  DCoffset = %f" % (i*BINBANDWIDTH, p, i, self.dcoffset))
         return r1
 
 
@@ -238,7 +238,7 @@ class ProcessAudio(AudioData):
         for i in range (0,len(power)):
             fCentre = self.intervalUpperF[i]/FFACTOR
             self.printPower(power[i], self.intervalUpperF[i]/FFACTOR)
-        print "--------------"
+        print("--------------")
 
     def getSpectrum(self, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*self.octave) )
@@ -280,9 +280,9 @@ class ProcessAudio(AudioData):
         return text
 
     def dynamicRange(self):
-        print "max %d, min %d" % (self.peakC, self.minC)
+        print("max %d, min %d" % (self.peakC, self.minC))
         dr = 20.0*math.log(self.peakC/(self.minC+1),10)
-        print "Dynamic range = %2.0f dB" % dr
+        print("Dynamic range = %2.0f dB" % dr)
 
     def rms(self, y):
         n=np.sqrt(np.abs(np.mean(np.square(y))))
@@ -296,7 +296,7 @@ class ProcessAudio(AudioData):
         for i in range (1,len(bins)):
             text += "[%2d %2.1f] " % (i*BINBANDWIDTH, bins[i]/250)
             if i >MAXBANDS: break
-        print text
+        print(text)
 
     def LR(data):
         dataL = data[0::2]
@@ -306,13 +306,13 @@ class ProcessAudio(AudioData):
         peakR = scale*math.log(np.abs(np.max(dataR)-np.min(dataR))/maxValue,10)+offset
         lString = "-"*int(bars-peakL*bars)+"#"*int(peakL*bars)
         rString = "#"*int(peakR*bars)+"-"*int(bars-peakR*bars)
-        print("[%s]=L%10f\t%10f R=[%s]"%(lString, peakL, peakR, rString))
+        print(("[%s]=L%10f\t%10f R=[%s]"%(lString, peakL, peakR, rString)))
 
     def LR2(data):
 
         lString = "-"*int(bars-left[0]*bars)+"#"*int(left[0]*bars)
         rString = "#"*int(right[0]*bars)+"-"*int(bars-right[0]*bars)
-        print("[%s]=L%10f\t%10f R=[%s]"%(lString, left[1], right[1], rString))
+        print(("[%s]=L%10f\t%10f R=[%s]"%(lString, left[1], right[1], rString)))
         # print("L=[%s]\tR=[%s]"%(lString, rString))
 
 

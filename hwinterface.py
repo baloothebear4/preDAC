@@ -56,7 +56,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
 
         """ run through the channels and set up the relays"""
         for source in AudioBoard.audioBoardMap:
-            print "AudioBoard.__init__> channel:", AudioBoard.audioBoardMap[source]
+            print("AudioBoard.__init__> channel:", AudioBoard.audioBoardMap[source])
             self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.OFF
 
         """ setup the headphones insert detect control """
@@ -67,21 +67,21 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         """ set up the default source and unmute """
         self.setSource(self.State['active'])
 
-        print "AudioBoard._init__ > ready", self.i2c1.port
+        print("AudioBoard._init__ > ready", self.i2c1.port)
 
     def sourceLogic(self):
         logic = {}
         for s in AudioBoard.audioBoardMap:
             if s != 'mute' and s != 'gain':
                 logic.update({s: AudioBoard.audioBoardMap[s][AudioBoard.POS]})
-        print "AudioBoard.sourceLogic > ", logic
+        print("AudioBoard.sourceLogic > ", logic)
         return logic
 
     def chLogic(self):
         logic = {}
         for source in AudioBoard.audioBoardMap:
             logic.update({AudioBoard.audioBoardMap[source][AudioBoard.POS]: source})
-        print "AudioBoard.chLogic > ", logic
+        print("AudioBoard.chLogic > ", logic)
         return logic
 
     def setSource(self, source):
@@ -89,21 +89,21 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['active']][AudioBoard.PIN] ] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
 
-        print "AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port
-        print "AudioBoard.setSource > status: ", self.State
+        print("AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port)
+        print("AudioBoard.setSource > status: ", self.State)
         self.State['active'] = source
 
     def mute(self):
         """ Mute the audio board"""
         self.State['mute'] = AudioBoard.ON
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.MUTE
-        print "AudioBoard.mute "
+        print("AudioBoard.mute ")
 
     def unmute(self):
         """ unmute the audio board"""
         self.State['mute'] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.UNMUTE
-        print "AudioBoard.unmute "
+        print("AudioBoard.unmute ")
 
     def toggleMute(self, volume):
         """ unmute the audio board"""
@@ -111,16 +111,25 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
             self.unmute()
         elif self.State['mute'] == AudioBoard.OFF and volume == 0:
             self.mute()
-        print "AudioBoard.togglemute "
+
+    def gain(self, on=True):
+        """ Mute the audio board"""
+        if on:
+            self.State['gain'] = AudioBoard.ON
+            self.i2c1.port[ AudioBoard.audioBoardMap['gain'][AudioBoard.PIN] ] = AudioBoard.ON
+        else:
+            self.State['gain'] = AudioBoard.OFF
+            self.i2c1.port[ AudioBoard.audioBoardMap['gain'][AudioBoard.PIN] ] = AudioBoard.OFF
+        print("AudioBoard.gain > ", self.State['gain'])
 
     def phonesdetect(self):
         """ phonesdetect pin has triggered an interupt """
         if GPIO.input(AudioBoard.PHONESDETECTPIN) == AudioBoard.PHONES_IN:
             self.State['phonesdetect'] = True
-            print "AudioBoard.phonesdetect> Headphones insert detected"
+            print("AudioBoard.phonesdetect> Headphones insert detected")
         else:
             self.State['phonesdetect'] = False
-            print "AudioBoard.phonesdetect> Headphones removed"
+            print("AudioBoard.phonesdetect> Headphones removed")
 
     def readAudioBoardState(self):
         return self.State
@@ -149,15 +158,15 @@ class ControlBoard:
         """ set up the controller knob events to change the source and menus """
         self.controllerKnob = RotaryEncoder( ControlBoard.PIN_A, ControlBoard.PIN_B, ControlBoard.BUTTON, self.controlKnobEvent )
 
-        print "ControlBoard._init__ > ready"
+        print("ControlBoard._init__ > ready")
 
     def shutdown(self,event):
-        print "ControlBoard.shutdown > shutdown request received", event
+        print("ControlBoard.shutdown > shutdown request received", event)
         self.mute()
         self.events.Shutdown('Shutdown')
 
     def poweroff(self,event=''):
-        print "ControlBoard.poweroff ", event
+        print("ControlBoard.poweroff ", event)
         os.system("sudo poweroff")
 
     def controlKnobEvent(self, event):
@@ -187,11 +196,11 @@ class RemoteController:
         SOCKPATH = "/var/run/lirc/lircd"
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        print ('starting up IR receiver on socket %s' % SOCKPATH)
+        print(('starting up IR receiver on socket %s' % SOCKPATH))
         self.sock.connect(SOCKPATH)
         self.sock.setblocking(False)
 
-        print "RemoteController._init__ > ready"
+        print("RemoteController._init__ > ready")
 
     def checkRemoteKeyPress(self):
         '''Get the next key pressed. raise events accordingly
@@ -220,9 +229,8 @@ class RemoteController:
                 self.events.CtrlTurn('anticlockwise')
             elif words[2] == "KEY_RIGHT" and words[1] == "00":
                 self.events.CtrlTurn('clockwise')
-	    elif words[2] == "KEY_STOP" and words[1] == "00":
-            	self.events.CtrlPress('down')
-
+            elif words[2] == "KEY_STOP" and words[1] == "00":
+                self.events.CtrlPress('down')
 
             #return words[2], words[1]
         except:
@@ -266,7 +274,7 @@ class VolumeBoard(PCF8574):
         """ set up the default volume """
         self.setVolume(VolumeBoard.DEFAULT_VOL)
 
-        print "VolumeBoard._init__ > ready", self.i2c2.port
+        print("VolumeBoard._init__ > ready", self.i2c2.port)
 
     def volKnobEvent(self, a):
         """ callback if the vol knob is turned or the button is pressed """
@@ -290,11 +298,12 @@ class VolumeBoard(PCF8574):
                 self.demandVolume = VolumeBoard.MIN_VOLUME
 
         # if self.demandVolume == 0: self.demandVolume = 1
-        print "VolumeBoard.volKnobEvent >", self.ev, self.demandVolume
+        # self.setVolume(self.demandVolume)
+        print("VolumeBoard.volKnobEvent > **check timing for interrupt update**", self.ev, self.demandVolume)
 
     def detectVolChange(self):
         """ use as part of the main loop to detect and implement volume changes """
-        if self.Volume <> self.demandVolume:
+        if self.Volume != self.demandVolume:
             self.setVolume(self.demandVolume)
             return True
         else:
@@ -304,7 +313,7 @@ class VolumeBoard(PCF8574):
         """ use as part of the main loop to detect and implement volume changes """
         if self.ev == 'Button down' and self.demandVolume == VolumeBoard.MIN_VOLUME:
             return 'mute'
-        elif self.ev == 'Button down' and self.demandVolume <> VolumeBoard.MIN_VOLUME:
+        elif self.ev == 'Button down' and self.demandVolume != VolumeBoard.MIN_VOLUME:
             return 'unmute'
         else:
             return 'false'
@@ -318,7 +327,7 @@ class VolumeBoard(PCF8574):
         relays = [False] * VolumeBoard.VOLUMESTEPS
         mask   = 0x01
         for i in range(VolumeBoard.VOLUMESTEPS):
-            print mask, volume & mask
+            # print(mask, volume & mask)
             relays[i] = (volume & mask == mask)
             mask = mask << 1
 
@@ -328,18 +337,21 @@ class VolumeBoard(PCF8574):
             self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = r
 
         self.Volume = volume
-        print "VolumeBoard.setVolume> demand %d, volume %d, \nsteps %s, \nports %s" % (self.demandVolume, self.Volume, relays, self.i2c2.port)
+        print("VolumeBoard.setVolume> demand %d, volume %d, \nVolumeBoard.setVolume>steps %s, \nVolumeBoard.setVolume>ports %s" % (self.demandVolume, self.Volume, relays, self.i2c2.port))
 
     def readVolume(self):
         return self.Volume
 
 
 class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #subclass so that there is only 1 interface point to all the HW classes
-    def __init__(self,events):
+    def __init__(self, events):
         VolumeBoard.__init__(self, events)
         ControlBoard.__init__(self, events)
         AudioBoard.__init__(self)
         RemoteController.__init__(self, events)
+
+        """ consider whether group together the data pull requests?
+            especially is the polling for vol change does not work well """
 
 
 """

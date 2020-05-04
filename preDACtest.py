@@ -7,18 +7,19 @@ preDAC Test harness
     for testing the HW board
 
 baloothebear4
-v1 April 2020
+v1.0 27 April 2020  Original
+v1.1 04 May 2020   Convert to python3
 
 """
 
-from smbus2 import SMBus
+
 import time, sys, os
 import struct, math
 import numpy as np
 
 
 import datetime
-from PIL import ImageFont, Image
+from PIL import ImageFont
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
 from luma.oled.device import ssd1306
@@ -41,16 +42,18 @@ class OLEDbar():
     bars        = oled_width / bar_space
 
     def make_font(self, name, size):
-        font_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), 'fonts', name))
-        return ImageFont.truetype(font_path, size)
+        font_path = os.path.abspath(os.path.join( os.path.dirname(__file__), 'fonts', name))
+        try:
+            return ImageFont.truetype(font_path, size)
+        except:
+            print("OLEDbar.make_font > error, font files not found at ", font_path)
 
     def __init__(self):
         serial = i2c(port=1, address=0x3c)
         self.device = ssd1306(serial, height=32)
         self.device.persist = True
         self.font = self.make_font("arial.ttf", 11)
-        print "OLED all set. Max bars = ", OLEDbar.bars
+        print("OLEDbar.__init__> all set. Max bars = ", OLEDbar.bars)
         self.regulator = framerate_regulator(fps=60)
         self.readtime = []
         # self.test_oled()
@@ -102,25 +105,25 @@ class OLEDbar():
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            print 'OLEDbar:calcDisplaytime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1])
+            print('OLEDbar:calcDisplaytime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
 
 
 
     def test_oled(self):
-        print "OLED test full speed"
+        print("OLED test full speed")
         self.device.persist = True
         for i in range(8):
             for j in range(OLEDbar.bars):
                 self.draw_bar(i*(OLEDbar.bar_space+10), 32)
                 # time.sleep(0.00002)
-        print "OLED testing done"
+        print("OLED testing done")
         # time.sleep(4)
 
     def test_oled2(self):
-        print "OLED test full speed"
+        print("OLED test full speed")
         with canvas(self.device) as draw:
             for j in range(OLEDbar.bars):
-                print "draw at col", j
+                print("draw at col", j)
                 for i in range(OLEDbar.oled_height):
                     self.draw_bar2(draw,j*OLEDbar.bar_space+4, i)
                     time.sleep(0.2)
@@ -202,7 +205,7 @@ def buttonpress(a):
         mute = not mute
 
     new = True
-    print "Rot enc event ", ev , count, mute
+    print("Rot enc event ", ev , count, mute)
 
 
 pinA = 26
@@ -215,12 +218,12 @@ def main():
     '''
 
     global mute, new
-    audio = AudioBoard()
-    logic = audio.chLogic()
+    audio   = AudioBoard()
+    logic   = audio.chLogic()
     chlogic = audio.sourceLogic()
-    status = audio.readAudioBoardState()
-    ch    = chlogic[status['active']]
-    print ">> active channel:", ch, "=", status['active']
+    status  = audio.readAudioBoardState()
+    ch      = chlogic[status['active']]
+    print("main() >> active channel:", ch, "=", status['active'])
 
     # r = RotaryEncoder(pinA, pinB, button, buttonpress)
 
@@ -261,13 +264,19 @@ def main():
     while True:
 
         line = GetLine()
-        if line == "q":
-            return
-        elif line >= '1' and line <= '6':
-            ch = int(line)
-            print "Channel=", ch, " source=", logic[ch]
-            audio.setSource(logic[ch])
-            chchanged = True
+        if line:
+
+            if line == "q":
+                return
+            elif line >= "1"  and line <= "6":
+                ch   = int(line)
+                print("Channel=", ch, " source=", logic[ch])
+                audio.setSource(logic[ch])
+                chchanged = True
+            elif line == "g":
+                audio.gain(not status['gain'])
+                chchanged = True
+
 
         if v.detectVolChange() or chchanged:
             vol    = v.readVolume()

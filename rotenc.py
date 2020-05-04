@@ -121,7 +121,7 @@ def buttonpress(a):
     elif a == RotaryEncoder.BUTTONDOWN:
         ev = 'Button down'
 
-    print "Rot enc event ", ev , count
+    print("Rot enc event ", ev , count)
 
 def main():
     '''
