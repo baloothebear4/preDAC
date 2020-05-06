@@ -42,13 +42,14 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
     MUTE            = OFF
     UNMUTE          = ON
     PHONES_IN       = 0
+    DEFAULT_SOURCE  = 'tape'
 
     i2c1_port       = 1
     address         = 0x20
     PHONESDETECTPIN = 12
 
     def __init__(self):
-        self.State  = {  'active'       : 'dac',
+        self.State  = {  'active'       : AudioBoard.DEFAULT_SOURCE,
                          'phonesdetect' : AudioBoard.OFF,
                          'mute'         : AudioBoard.OFF,
                          'gain'         : AudioBoard.OFF }
@@ -252,7 +253,7 @@ class VolumeBoard(PCF8574):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 20
+    DEFAULT_VOL  = 100
 
     """ Map of the volume relay step to the i2c pin """
     # RELAYMAP     = ( 3, 2, 1, 7, 6, 5, 4)

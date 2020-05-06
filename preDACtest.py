@@ -286,7 +286,7 @@ def main():
             vol    = v.readVolume()
             audio.toggleMute(vol)
             status = audio.readAudioBoardState()
-            # OLED.draw_status( vol-127,'%d = %s' %(ch, logic[ch]),status['mute'], status['gain'], status['phonesdetect'])
+            OLED.draw_status( vol-127,'%d = %s' %(ch, logic[ch]),status['mute'], status['gain'], status['phonesdetect'])
             chchanged = False
 
         proc.process()
@@ -294,8 +294,8 @@ def main():
         # proc._print()
         # print proc.leftCh()
 
-        OLED.draw_screen(proc.leftCh())
-        time.sleep(0.1)
+        # OLED.draw_screen(proc.leftCh())
+        time.sleep(0.001)
 
     return
 

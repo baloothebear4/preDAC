@@ -120,7 +120,7 @@ class ProcessAudio(AudioData):
                 break
 
             except Exception as e:
-                print("Failed decode ", e)
+                print("ProcessAudio.process> Failed decode ", e)
                 retry += 1
 
         # self.calcReadtime(False)
@@ -204,7 +204,7 @@ class ProcessAudio(AudioData):
 
         for i in range(0, len(r1)):
             if r1[i] == p: break
-        print("peak power %2dHz=%2.1f: bin %d.  DCoffset = %f" % (i*BINBANDWIDTH, p, i, self.dcoffset))
+        # print("ProcessAudio.calcFFT> peak power %2dHz=%2.1f: bin %d.  DCoffset = %f" % (i*BINBANDWIDTH, p, i, self.dcoffset))
         return r1
 
 
