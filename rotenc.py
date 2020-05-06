@@ -48,12 +48,12 @@ class RotaryEncoder:
 
         GPIO.setup(self.pinA, GPIO.IN)
         GPIO.setup(self.pinB, GPIO.IN)
-        GPIO.setup(self.button, GPIO.IN)
+        GPIO.setup(self.button, GPIO.IN)#, pull_up_down=GPIO.PUD_UP)
 
         # Add event detection to the GPIO inputs
         GPIO.add_event_detect(self.pinA, GPIO.FALLING, callback=self.switch_event)
         GPIO.add_event_detect(self.pinB, GPIO.FALLING, callback=self.switch_event)
-        GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event) #, bouncetime=0)
+        GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event, bouncetime=5)
 
 
     def switch_event(self, pin):
@@ -67,12 +67,14 @@ class RotaryEncoder:
     # Push button up event
     def button_event(self,button):
         # print "RotaryEncoder.button_event> GPIO", button
+        self.LockRotary.acquire()
         if self.getSwitchState(self.button):
         	event = self.BUTTONUP
         else:
         	event = self.BUTTONDOWN
-        self.callback(event)
 
+        self.callback(event)
+        self.LockRotary.release()
 
     # Get a switch state
     def getSwitchState(self, switch):

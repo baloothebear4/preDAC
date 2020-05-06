@@ -78,7 +78,7 @@ class ProcessAudio(AudioData):
         # set up audio input
         self.recorder = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE, mode=alsaaudio.PCM_NORMAL)
         self.recorder.setchannels(CHANNELS)
-        self.recorder.setrate(RATE)
+        self.recorder.setrate(int(RATE))
         self.recorder.setformat(INFORMAT)
         self.recorder.setperiodsize(FRAMESIZE)
 

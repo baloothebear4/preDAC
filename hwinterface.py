@@ -122,7 +122,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
             self.i2c1.port[ AudioBoard.audioBoardMap['gain'][AudioBoard.PIN] ] = AudioBoard.OFF
         print("AudioBoard.gain > ", self.State['gain'])
 
-    def phonesdetect(self):
+    def phonesdetect(self,ev):
         """ phonesdetect pin has triggered an interupt """
         if GPIO.input(AudioBoard.PHONESDETECTPIN) == AudioBoard.PHONES_IN:
             self.State['phonesdetect'] = True
@@ -352,7 +352,7 @@ class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #su
 
         """ consider whether group together the data pull requests?
             especially is the polling for vol change does not work well """
-
+        # self.toggleMute()
 
 """
     test code for remote control
