@@ -90,13 +90,14 @@ class OLEDbar():
 
     def draw_screen(self,data):
         self.calcDisplaytime()
+        # print("OLEDbar.draw_screen> ", data)
         bars = OLEDbar.bars
         if len(data)< OLEDbar.bars: bars = len(data)
 
         with self.regulator:
             with canvas(self.device) as c:
                 for i in range(bars):
-                    self.draw_bar2(c, i, data[i]*(40/32.0) )
+                    self.draw_bar2(c, i, 32*(35+data[i])/110 )
         self.calcDisplaytime(False)
 
     def calcDisplaytime(self,start=True):
@@ -105,7 +106,7 @@ class OLEDbar():
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            print('OLEDbar:calcDisplaytime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
+            # print('OLEDbar:calcDisplaytime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
 
 
 
@@ -291,32 +292,13 @@ def main():
 
         proc.process()
         # proc.printSpectrum()
-        # proc._print()
+        proc._print()
         # print proc.leftCh()
 
-        # OLED.draw_screen(proc.leftCh())
-        time.sleep(0.001)
-
-    return
+        OLED.draw_screen(proc.rightCh())
+        # time.sleep(0.001)
 
 
-    loops = 0
-
-    while(loops<1000):
-        start = time.time()
-
-        loops += 1
-        proc.process()
-        # proc.printSpectrum()
-        # proc._print()
-        # print proc.leftCh()
-
-        OLED.draw_screen(proc.leftCh())
-        # OLED.draw_screen(testdata(loops))
-        # proc._print()
-
-        # print 'pause'
-        # time.sleep(.02)
 
 if __name__ == "__main__":
     try:

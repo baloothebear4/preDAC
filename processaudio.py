@@ -13,21 +13,22 @@
 
 """
 
-import alsaaudio, struct, time, math
+import struct, time, math
 import numpy as np
+import pyaudio
 
 # constants
 CHANNELS        = 2
-INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
-RATE            = 44100/2
-FRAMESIZE       = 1024
+# INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
+INFORMAT        = pyaudio.paInt16
+RATE            = 22050*2
+FRAMESIZE       = 256
 duration        = 10
-maxValue        = float(2**16)
-bars            = 20
-offset          = 1
-scale           = 0.3
+maxValue        = float(2**15)
+bars            = 30
+RMSNOISEFLOOR   = -66  #dB
 
-WINDOW          = 15 # 4 = Hanning
+WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
 OCTAVE          = 3
 NUMPADS         = 0
@@ -65,34 +66,37 @@ class AudioData():
                 line = ""
 
     def _print(self):
-        print("Left Spectrum  >%s" % self.audio['SpectrumL'])
-        print("Right Spectrum >%s" % self.audio['SpectrumR'])
-        print("Left VU        >%f" % self.audio['VU_L'])
-        print("Right VU       >%f" % self.audio['VU_R'])
-        print("Left Peak      >%f" % self.audio['Peak_L'])
-        print("Right Peak     >%f" % self.audio['Peak_R'])
+        # print("Left Spectrum  >%s" % self.audio['SpectrumL'])
+        # print("Right Spectrum >%s" % self.audio['SpectrumR'])
+        # print("Left VU        >%f" % self.audio['VU_L'])
+        # print("Right VU       >%f" % self.audio['VU_R'])
+        # print("Left Peak      >%f" % self.audio['Peak_L'])
+        # print("Right Peak     >%f" % self.audio['Peak_R'])
+        self.LR2(self.audio)
 
 
 class ProcessAudio(AudioData):
     def __init__(self):
         # set up audio input
-        self.recorder = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE, mode=alsaaudio.PCM_NORMAL)
-        self.recorder.setchannels(CHANNELS)
-        self.recorder.setrate(int(RATE))
-        self.recorder.setformat(INFORMAT)
-        self.recorder.setperiodsize(FRAMESIZE)
+        # self.recorder = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE, mode=alsaaudio.PCM_NORMAL)
+        # self.recorder.setchannels(CHANNELS)
+        # self.recorder.setrate(int(RATE))
+        # self.recorder.setformat(INFORMAT)
+        # self.recorder.setperiodsize(FRAMESIZE)
+        self.recorder = pyaudio.PyAudio()
+        self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE)
 
         AudioData.__init__(self)
 
-        self.peakC = 0.0
-        self.minC  = maxValue
-        self.dc    = []
-        self.readtime=[]
+        self.peakC      = 0.0
+        self.minC       = maxValue
+        self.dc         = []
+        self.readtime   = []
 
-        # window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
-        self.window = np.blackman(FRAMESIZE)
+        self.window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
+        # self.window     = np.blackman(FRAMESIZE)
         self.createBands()
-        print("ProcessAudio: reading from soundcard ", self.recorder.cardname())
+        print("ProcessAudio: reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
 
     def process(self):
         '''
@@ -101,26 +105,36 @@ class ProcessAudio(AudioData):
         self.calcReadtime()
         retry   = 0
         datalen = 0
-        while datalen < FRAMESIZE:
-            datalen, raw_data    = self.recorder.read()
-            if datalen< 0: print('ProcessAudio.process> *** datalen %d, buffer size %d' % (datalen, len(raw_data)))
+
 
         while retry<5:
             try:
-                data        = np.frombuffer( raw_data, dtype=np.int16 )
+                while datalen < FRAMESIZE:
+                    raw_data    = self.stream.read(FRAMESIZE)
+                    datalen = len(raw_data)
+                    if datalen< 0: print('ProcessAudio.process> *** datalen %d, buffer size %d' % (datalen, len(raw_data)))
+
+                data        = np.frombuffer(raw_data, dtype=np.int16 )/maxValue
                 dataL       = data[0::2]
                 dataR       = data[1::2]
 
-                self.audio['SpectrumL'] = self.packFFT(self.calcFFT(dataL))
+                # self.audio['SpectrumL'] = self.packFFT(self.calcFFT(dataL))
                 self.audio['SpectrumR'] = self.packFFT(self.calcFFT(dataR))
                 self.audio['VU_L'], self.audio['Peak_L'] = self.VU(dataL)
                 self.audio['VU_R'], self.audio['Peak_R'] = self.VU(dataR)
-                # self.calibrate(data)
+
+                # self.seeData(dataL,"left")
+                # self.seeData(dataR,"right")
+                # print("L: %s <-> %s :R" % (self.calibrate(dataL),self.calibrate(dataR)))
+                self.calibrate(dataL)
+                self.calibrate(dataR)
 
                 break
 
             except Exception as e:
                 print("ProcessAudio.process> Failed decode ", e)
+                self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE)
+
                 retry += 1
 
         # self.calcReadtime(False)
@@ -133,6 +147,7 @@ class ProcessAudio(AudioData):
         self.octave         = spacing
         self.firstfreq      = fcentre
         self.intervalUpperF = []
+        self.centres        = []
         print("ProcessAudio.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre))
         #
         # Loop in octaves bands
@@ -155,26 +170,34 @@ class ProcessAudio(AudioData):
                 while (bincount+1)*BINBANDWIDTH <= intervalUpper:
                     bincount    += 1
                 self.intervalUpperF.append( intervalUpper )
+                self.centres.append( fcentre )
 
             # print " Fcentre %2.1f, Upper bound %2.1f, startbin %d (%4.0fHz), to bin %d (%4.0fHz)" % (fcentre, intervalUpper, startbin, startbin * BINBANDWIDTH, bincount, bincount * BINBANDWIDTH )
             startbin = bincount+1
 
 
-        print("  %d bands determined\n" % (len(self.intervalUpperF)))
+        print("ProcessAudio.createBands>  %d bands determined: %s" % (len(self.centres), self.centres))
         return self.intervalUpperF
 
     def VU(self,data):
-        peak = scale*math.log( np.abs(np.max(data)-np.min(data))/maxValue, 10 ) + offset
-        vu   = self.floor((1*math.log( self.rms(data)/100, 10)+offset),0)
+        """ normalise to 0-1 """
+        SCALE = 100
+        OFFSET= 110
+
+        peak = (20*math.log( np.abs(np.max(data)-np.min(data)), 10 )+OFFSET)/SCALE
+        # vu   = self.floor((math.log( self.rms(data)/self.rms(maxValue), 10)+offset),0)
+        vu   = (20*math.log( self.rms(data), 10)+OFFSET)/SCALE
+
 
         return (vu,peak)
 
 
+    """ use this to shift the noise floor eg: RMS 20 - 5000 -> 0->5000"""
     def floor(self, x,y):
         if x > y:
             return x
         else:
-            return 0
+            return 1
 
     def calcReadtime(self,start=True):
         if start:
@@ -198,12 +221,12 @@ class ProcessAudio(AudioData):
 
 
     def calcFFT(self, data):
-        self.calcDCoffset(data)
-        r1   = np.abs(np.fft.rfft( data ))**2 #self.window
-        p    = np.amax(r1)
+        # self.calcDCoffset(data)
+        r1   = np.abs(np.fft.rfft( data * self.window ))**2 #squared to get the power
+        # p    = np.amax(r1)
 
-        for i in range(0, len(r1)):
-            if r1[i] == p: break
+        # for i in range(0, len(r1)):
+        #     if r1[i] == p: break
         # print("ProcessAudio.calcFFT> peak power %2dHz=%2.1f: bin %d.  DCoffset = %f" % (i*BINBANDWIDTH, p, i, self.dcoffset))
         return r1
 
@@ -222,7 +245,7 @@ class ProcessAudio(AudioData):
             while bincount*BINBANDWIDTH <= band:
                 bincount    += 1
 
-            level = np.log10((bins[startbin:bincount].mean()))
+            level = 20*np.log10((bins[startbin:bincount].mean()))
             spectrumBands.append( level )
             startbin = bincount
 
@@ -265,29 +288,29 @@ class ProcessAudio(AudioData):
         """
         evaluate how many bits of data are being used by the ADC
         """
-        text  = ''
-        r = self.rms(data)
-        maxS = np.max(np.abs(data))
-        minS = np.min(np.abs(data))
+        text = ''
+        r    = self.rms(data)
+        text = "%f" % r
+        maxS = np.max(r)
+        minS = np.min(r)
         # print np.min(dataL), maxL
 
         if maxS > self.peakC:
             self.peakC = maxS
-            text  += "peak %8d" % self.peakC
+            text  += "max %8d " % self.peakC
         if minS < self.minC:
             self.minC = minS
-            text  += " min %8d\n" % self.minC
+            text  += " min %8d " % self.minC
         return text
 
     def dynamicRange(self):
-        print("max %d, min %d" % (self.peakC, self.minC))
-        dr = 20.0*math.log(self.peakC/(self.minC+1),10)
-        print("Dynamic range = %2.0f dB" % dr)
+        print("dynamicRange> RMS max %d, min %d" % (self.peakC, self.minC))
+        dr = 20.0*math.log(self.peakC,10)
+        print("dynamicRange> Dynamic range = %2.0f dB" % dr)
 
+    """ calculate the RMS power (NB: sqrt is not required) """
     def rms(self, y):
-        n=np.sqrt(np.abs(np.mean(np.square(y))))
-        return n
-
+        return np.abs(np.mean(np.square(y)))
 
     ''' test functions '''
 
@@ -298,21 +321,12 @@ class ProcessAudio(AudioData):
             if i >MAXBANDS: break
         print(text)
 
-    def LR(data):
-        dataL = data[0::2]
-        dataR = data[1::2]
 
-        peakL = scale*math.log(np.abs(np.max(dataL)-np.min(dataL))/maxValue,10)+offset
-        peakR = scale*math.log(np.abs(np.max(dataR)-np.min(dataR))/maxValue,10)+offset
-        lString = "-"*int(bars-peakL*bars)+"#"*int(peakL*bars)
-        rString = "#"*int(peakR*bars)+"-"*int(bars-peakR*bars)
-        print(("[%s]=L%10f\t%10f R=[%s]"%(lString, peakL, peakR, rString)))
+    def LR2(self, audio):
 
-    def LR2(data):
-
-        lString = "-"*int(bars-left[0]*bars)+"#"*int(left[0]*bars)
-        rString = "#"*int(right[0]*bars)+"-"*int(bars-right[0]*bars)
-        print(("[%s]=L%10f\t%10f R=[%s]"%(lString, left[1], right[1], rString)))
+        lString = "-"*int(bars-audio['VU_L']*bars)+"#"*int(audio['VU_L']*bars)
+        rString = "#"*int(audio['VU_R']*bars)+"-"*int(bars-audio['VU_R']*bars)
+        print(("[%s]=L%10f-^%10f^%10f\t%10f R=[%s]"% (lString, audio['VU_L'], audio['Peak_L'], audio['Peak_L'], audio['VU_R'], rString)))
         # print("L=[%s]\tR=[%s]"%(lString, rString))
 
 
@@ -327,7 +341,8 @@ def main():
 
             audioprocessor.process()
             audioprocessor.printSpectrum()
-            audioprocessor._print()
+            # audioprocessor._print()
+            # audioprocessor.calibrate()
 
         audioprocessor.dynamicRange()
         runflag = 0
