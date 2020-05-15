@@ -39,7 +39,7 @@ class OLEDbar():
     bar_width   = 3
     bar_gap     = 2
     bar_space   = bar_gap + bar_width
-    bars        = oled_width / bar_space
+    bars        = int(oled_width / bar_space)
 
     def make_font(self, name, size):
         font_path = os.path.abspath(os.path.join( os.path.dirname(__file__), 'fonts', name))
@@ -292,11 +292,11 @@ def main():
 
         proc.process()
         # proc.printSpectrum()
-        proc._print()
+        # proc._print()
         # print proc.leftCh()
 
         OLED.draw_screen(proc.rightCh())
-        # time.sleep(0.001)
+        time.sleep(0.005)
 
 
 
