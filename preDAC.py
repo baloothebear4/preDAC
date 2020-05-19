@@ -22,7 +22,7 @@
 
 from hwinterface import HWInterface
 from octave import Octave
-from screenobjs import *
+from screenframes import *
 
 import os
 import sys
