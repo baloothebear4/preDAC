@@ -2,17 +2,15 @@
 """
  Display classes:
     - base screens
-    - screen classes & object mangement
-    - display driver control
+    - screen frames
+    - sub-frames
 
  Part of mVista preDAC
 
- Baloothebear4 Sept 17
-
+ v1.0 Baloothebear4 Sept 17 - Original
+ v2.0 Baloothebear4 May 20  - Re-factored to use Frame class, simplifying & cleaning up
 
 """
-
-from octave import Octave
 
 import os
 import sys
@@ -20,15 +18,8 @@ from PIL import ImageFont, Image
 import time
 from luma.core.render import canvas
 
-def make_font(name, size):
-    font_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), 'fonts', name))
-    return ImageFont.truetype(font_path, size)
 
-def drawCentredText( basis, xc, yc, r, v, font, maxw):
-    w, h = basis.textsize(text=str(v), font=font)
-    # print "drawCentredText", xc-r+maxw/2-w/2, yc-r, xc, yc, r
-    basis.text((xc-r+maxw/2-w/2, yc-r), text=str(v), font=font , fill="white")
+from oleddriver import make_font
 
 
 class ActualScreen:
@@ -111,37 +102,7 @@ class Location(Frame):
         self.bottom       = self.sheight
 
 
-    """ need some methods to align the screen object relative to a given position:
-        eg leftof(x,y), centre(y)...
-    """
-    def drawFrameCentredText( self, basis, text, font):
-        w, h = basis.textsize(text=text, font=font)
-        self.x = (self.fwidth  - w)/2
-        self.y = (self.fheight - h)/2
-        basis.text((self.fx+self.x, self.fy+self.y), text=text, font=font , fill="white")
 
-    def drawFrameTopCentredText( self, basis, text, font):
-        w, h = basis.textsize(text=text, font=font)
-        self.x = (self.fwidth  - w)/2
-        self.y = 0
-        basis.text((self.fx+self.x, self.fy+self.y), text=text, font=font , fill="white")
-
-    def drawFrameLRCentredText( self, basis, xc, yc, r, text, font, maxw ):
-        w, h = basis.textsize(text=str(text), font=font)
-        basis.text((xc-r+maxw/2-w/2, yc-r), text=str(text), font=font , fill="white")
-
-    def drawFrameCentredImage( self, basis, image ):
-        self.x = (self.fwidth  - image.width)/2
-        self.y = (self.fheight - image.height)/2
-        image =  image.convert("L")  #(self.platform.device.mode)
-        basis.bitmap( (self.fx+self.x, self.fy+self.y), image) # fill="white" )
-
-    def drawFrameTriange( self, basis, w, h, col ):
-        x1y1   = (self.fx+self.x + w, self.fy+self.y-h)
-        x2y2   = (self.fx+self.x + w, self.fy+self.y)
-        basis.polygon( [(self.fx + self.x, self.fy + self.y ), x1y1, x2y2] , fill=col, outline=col )
-        # print "Location.drawFrameTriange>", self
-        #basis.polygon([(self.x, self.y), (self.x + self.width, self.y-self.height), (self.x + self.width, self.y)], outline="red", fill="red")
 
     """ Alignments, relative to frame, assume drawing a rectangle with the coordinates in the top LH corner """
     def alignLeft(self):
