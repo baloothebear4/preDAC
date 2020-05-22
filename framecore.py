@@ -18,8 +18,11 @@
 
 """
 
-from oleddriver import internalOLED, make_font   # used for Test purposes
-from platform   import Platform       # used for Test purposes
+from oleddriver import make_font, scaleImage
+
+import os
+from oleddriver import internalOLED     # used for Test purposes
+from platform   import Platform         # used for Test purposes
 
 class Geometry():
     def __init__(self, bounds=[0,0,0,0]):
@@ -156,7 +159,7 @@ class Geometry():
         this is to give an absolute coordinate for drawing
     """
     def norm(self):
-        return (self._bounds[0]+self.a, self._bounds[1]+self.b, self._bounds[0]+self.c, self._bounds[0]+self.d)
+        return [self._bounds[0]+self.a, self._bounds[1]+self.b, self._bounds[0]+self.c, self._bounds[0]+self.d]
 
     def normxy(self, xy):
         return (self._bounds[0]+xy[0], self._bounds[1]+xy[1])
@@ -190,7 +193,7 @@ class Frame(Geometry):
         - checks are performed to see the coordinates given do not take the Frame outside the bounds
     """
 
-    def __init__(self, bounds, platform=None, drawfn= None, scalers=[1.0,1.0], Valign='bottom', Halign='left'):
+    def __init__(self, bounds, platform=None, display=None, scalers=[1.0,1.0], Valign='bottom', Halign='left'):
         """
             scalars is a tuple (w%, h%) where % is of the bounds eg (0,0,64,32) is half the width, full height
             bounds is list of the bottom left and upper right corners eg (64,32)
@@ -198,8 +201,8 @@ class Frame(Geometry):
         Geometry.__init__(self, bounds)
         self.platform   = platform    #only needed by the top Frame or Screen, as is passed on draw()
         self.bounds     = Geometry(bounds)
-        self.frames     = [self]         #Holds the stack of containing frames
-        self.drawfn     = drawfn
+        self.frames     = []         #Holds the stack of containing frames
+        self.display    = display
         self.V          = Valign
         self.H          = Halign
         print("Frame.__init__> ", self)
@@ -225,7 +228,7 @@ class Frame(Geometry):
             self.move_ab( (self.a, self.bounds.b) )
             # move so that self.b = self.bounds.b
         else:
-            raise ValueError('Frame.align: unknown vertical anchor->', self.V)
+            raise ValueError('Frame.align: unknown vertical anchor (top, middle, bottom)->', self.V)
 
         if self.H   == 'left':
             self.move_ab( (self.bounds.a, self.b) )
@@ -237,7 +240,7 @@ class Frame(Geometry):
             self.move_cd( (self.bounds.c, self.d) )
             # move so that self.c = self.bounds.c
         else:
-            raise ValueError('Frame.align: unknown horz anchor->', self.H)
+            raise ValueError('Frame.align: unknown horz anchor (left, centre, right)->', self.H)
 
     def __iadd__(self, frame):
         self.frames.append(frame)
@@ -245,8 +248,7 @@ class Frame(Geometry):
 
     def draw(self, c):
         for f in self.frames:
-            if f.drawfn is not None:
-                f.draw(c)
+            f.draw(c)
 
     def frametext(self, f):
         return "%-10s > %s" % (type(f).__name__, super(Frame, f).__str__())
@@ -325,52 +327,177 @@ class Frame(Geometry):
 """ test code """
 
 class Frame_1(Frame):
-    def __init__(self, bounds, platform):
-        Frame.__init__(self, platform=platform, drawfn=self.draw, bounds=bounds, scalers=(0.5,0.3), Valign='bottom', Halign='centre')
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='right')
         self.font = make_font("arial.ttf", 11)
 
     def draw(self, device):
-        self.platform.display.rectangle( device, self, outline="blue")
-        self.platform.display.drawFrameCentredText( device, self, "frame 1 test", self.font)
+        self.display.outline( device, self, outline="blue")
+        self.display.drawFrameCentredText( device, self, "frame 1 test", self.font)
 
 class Frame_2(Frame):
-    def __init__(self, bounds, platform):
-        Frame.__init__(self, platform=platform, drawfn=self.draw, bounds=bounds, scalers=(0.5,0.5), Valign='top', Halign='centre')
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='centre')
         self.font = make_font("arial.ttf", 11)
 
     def draw(self, device):
-        self.platform.display.drawFrameTopCentredText( device, self, "frame 2 is rather long", self.font)        # self.platform.display.rectangle( device, self.coords, outline="blue")
-        pass
+        self.display.drawFrameTopCentredText( device, self, "frame 2 is rather long", self.font)        # self.display.rectangle( device, self.coords, outline="blue")
+
 
 class Frame_3(Frame):
-    def __init__(self, bounds, platform):
-        Frame.__init__(self, platform=platform, drawfn=self.draw, bounds=bounds, scalers=(0.5,1.0), Valign='bottom', Halign='right')
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,1.0), Valign='bottom', Halign='right')
         self.font = make_font("arial.ttf", 11)
 
     def draw(self, device):
-        self.platform.display.rectangle( device, self, outline="blue")
+        self.display.outline( device, self, outline="blue")
         pass
 
+class VolumeAmountFrame(Frame):
+    """
+        Displays a triangle filled proportional to the Volume level
+    """
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(0.5,1.0), Valign='middle', Halign='left')
 
+    def draw(self, device):
+        self.display.drawFrameTriange( device, self, 1.0, fill="black" )
+        vol = self.platform.volume_percent
+        self.display.drawFrameTriange( device, self, vol, fill="white" )
 
-class testScreen(Frame):
-    def __init__(self, platform):
-        Frame.__init__(self, platform.display.boundary, platform)
-        self += Frame_1(platform.display.boundary, platform)
-        self += Frame_2(platform.display.boundary, platform)
-        self += Frame_3(platform.display.boundary, platform)
+class TextFrame(Frame):
+    """
+        Display a simple centred set of text
+    """
+    def __init__(self, bounds, platform, display, text=''):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.4,0.4), Valign='middle', Halign='right')
+        self.text   = text
+        self.font   = make_font("arial.ttf", self.h)
+
+    def draw(self, basis):
+        self.display.drawFrameCentredText(basis, self, self.text, self.font)
+
+class MenuFrame(Frame):
+    """
+        Display a simple the title of screen, as an overlay
+    """
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.4), Valign='top', Halign='centre')
+        self.font   = make_font("arial.ttf", self.h)
+
+    def draw(self, basis):
+        text = self.platform.screenname
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class SourceIconFrame(Frame):
+    """
+        Displays a an Icon for the source type and animates it
+    """
+    def __init__(self, bounds, platform, display):  # size is a scaling factor
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,1.0), Valign='bottom', Halign='left')
+        self.files          = {}  # dictionary of files to images
+        self.icons          = {}  # dictionary of images, sources as keys
+
+        #Build a dict of all the icon files to be used
+        sources = self.platform.sourcesAvailable()
+        for s in sources:
+            self.files.update( {s: self.platform.getSourceIconFiles(s)} )
+
+        print("source files>", self.files)
+        #Build a dict of all the images, sized, positioned, ready to go
+        for s in self.files:
+            images = []
+            for f in self.files[s]:
+                img_path  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'icons', f))
+                img = scaleImage( img_path, self )
+                # if img.width > self.w:
+                #     self.w = img.width
+                images.append( img )
+            self.icons.update( {s : images} )
+
+        # print( "SourceIcon.__init__> ready", self.icons)
+
+    def draw(self, basis):
+        print ("SourceIconFrame.draw>", self.platform.activeSource, self.platform.currentIcon)
+        self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource][self.platform.currentIcon])
+
+class VUFrame(Frame):
+    """
+        Displays a horizontal bar with changing colours at the top
+        - side is str 'left' or 'right'
+        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
+    """
+    BARHEIGHT    = 0.6  # % of frame height
+    TEXTGAP      = 1.5   # % of text width left bar starts
+    PEAKBARWIDTH = 1  # pixels
+
+    def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
+        self.limits  = limits
+        self.channel = channel
+        if channel == 'left':
+            self.ch_text = 'L'
+            V    = 'top'
+        elif channel == 'right':
+            self.ch_text = 'R'
+            V    = 'bottom'
+        else:
+            raise ValueError('VUFrame.__init__> unknown channel', channel)
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 0.5), Valign=V, Halign='left')
+        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
+
+    def draw(self, basis):
+        self.display.outline( basis, self, outline="white")
+        self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
+        vu      = self.platform.vu[self.channel]
+        w, h    = basis.textsize(self.ch_text, self.font)
+        xoffset = w*VUFrame.TEXTGAP
+        maxw    = self.w-xoffset
+        wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
+
+        for limit in self.limits:
+            self.display.drawFrameMiddlerect(basis, self, limit[1], wh, xoffset)
+            if vu < limit[0]: break  #otherwise do the next colour
+            xoffset = w*VUFrame.TEXTGAP + maxw * limit[0]
+            wh[0]   = maxw * (vu - limit[0])
+
+        xoffset = w*VUFrame.TEXTGAP + maxw * self.platform.peak[self.channel]
+        wh      = [VUFrame.PEAKBARWIDTH, self.h*VUFrame.BARHEIGHT]
+        self.display.drawFrameMiddlerect(basis, self, 'white', wh, xoffset)
+
+class VUScreen(Frame):
+    def __init__(self, platform, display, scale):
+        geo   = Geometry(display.boundary)
+        geo.scale( (scale, 1.0) )   # make the VU Screen half width
+        Frame.__init__(self, geo.coords, platform, display)
+        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
+        self += VUFrame(geo.coords, platform, display, 'left', limits )
+        self += VUFrame(geo.coords, platform, display, 'right', limits )
+        self += TextFrame(display.boundary, platform, display, "45")
         self.check()
 
+class testScreen(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += Frame_1(display.boundary, platform, display)
+        # self += Frame_2(display.boundary, platform, display)
+        # self += VolumeAmountFrame(display.boundary, platform, display)
+
+        self += TextFrame(display.boundary, platform, display, "Welcome")
+        # self += MenuFrame(display.boundary, platform, display)
+        # self += SourceIconFrame(display.boundary, platform, display)
+        self += VUScreen(platform, display)
+        self.check()
 
 
 def frametest():
     p = Platform()
-    a = testScreen(p)
+    # a = testScreen(p, p.internaldisplay)
+    a = VUScreen(p, p.internaldisplay, 0.6)
+
     print( "testScreen initialised: ", a, p )
 
-    p.display.drawcallback(a.draw)   # this is dynamically changed for each new screen
-
-    p.display.draw()
+    p.internaldisplay.draw(a.draw)
 
     print( "testScreen draw executed")
 

@@ -15,7 +15,7 @@ v1. 20 May 2020   Original, based on OLEDbar() class
 import time, sys, os
 
 import datetime
-from PIL import ImageFont
+from PIL import ImageFont, Image, ImageOps
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
 from luma.oled.device import ssd1306
@@ -27,6 +27,25 @@ def make_font(name, size):
         return ImageFont.truetype(font_path, size)
     except:
             print("make_font > error, font files not found at ", font_path)
+
+def scaleImage(image_path, geo):
+    """  scales an image to fit the frame, with the height or width changing proportionally """
+    """  Find out which parameter does not fit the frame """
+    # print float(image.width) / self.fwidth,  float(image.height) /self.fheight
+    image = Image.open(image_path)
+    image = ImageOps.invert(image)
+    # logo = Image.open(img_path).convert("RGBA")
+    if   float(image.width) / geo.w > float(image.height) / geo.h:
+        wpercent = (geo.w/float(image.width))
+        hsize = int((float(image.height)*float(wpercent)))
+        # print ("SourceIcon.scaleimage> height", hsize, wpercent)
+        return image.resize((geo.w, hsize), Image.ANTIALIAS)
+    else:
+        wpercent = (geo.h/float(image.height))
+        wsize = int((float(image.width)*float(wpercent)))
+        # print ("SourceIcon.scaleimage> width", wsize, wpercent)
+        return image.resize((wsize, geo.h), Image.ANTIALIAS)
+    return image
 
 class OLEDdriver(canvas):
     oled_height = 32
@@ -62,24 +81,37 @@ class OLEDdriver(canvas):
                 c.text((0,0), text='test 1234: %d' % self.device.height, fill="white", font=self.font)
         # time.sleep(3)
 
-    def draw(self):
+    def draw(self, screen):
         self.calcDisplaytime(True)
         with self.regulator:
             with canvas(self.device) as c:
-                self.drawcallback(c)
+                screen(c)
         self.calcDisplaytime(False)
 
     @property
     def boundary(self):
         return [0 , 0, self.device.width-1, self.device.height-1]
 
-    def rectangle(self, basis, geo, outline):
+    def outline(self, basis, geo, outline):
         basis.rectangle(self.trabcd(geo.coords), outline=outline)
 
-        """ need some methods to align the screen object relative to a given position:
-            eg leftof(x,y), centre(y)...
-        """
+    def drawFrameMiddlerect(self, basis, geo, fill, wh,  xoffset=0):
+        """ xoffset is how far from the left side to draw the rect
+            size is set to the given height"""
+        if wh[0]>geo.w: print("OLEDdriver.drawFrameMiddlerect> rectangle width is too large for frame")
+        if wh[1]>geo.h: print("OLEDdriver.drawFrameMiddlerect> rectangle height is too large for frame")
+        coords = (geo.a+xoffset, geo.centre[1]-wh[1]/2, geo.a+xoffset+wh[0], geo.centre[1]+wh[1]/2)
+        basis.rectangle(self.trabcd(coords), fill=fill)
+
+    def drawFrameLVCentredtext(self, basis, geo, text, font):
+        w, h = basis.textsize(text=text, font=font)
+        if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
+        if h > geo.h: print("OLEDdriver.drawFrameCentredText> text to high for frame")
+        xy = (geo.a, geo.centre[1]+h/2)
+        basis.text(self.trxy( xy ), text=text, font=font , fill="white")
+
     def drawFrameCentredText( self, basis, geo, text, font):
+        """ text is written in the centre of the frame """
         w, h = basis.textsize(text=text, font=font)
         if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
         if h > geo.h: print("OLEDdriver.drawFrameCentredText> text to high for frame")
@@ -97,16 +129,19 @@ class OLEDdriver(canvas):
     def drawFrameCentredImage( self, basis, geo, image ):
         w = image.width
         h = image.height
+        if w > geo.w: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
+        if h > geo.h: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
         xy = (geo.centre[0]-w/2, geo.centre[1]+h/2)
         image =  image.convert("L")  #(self.platform.device.mode)
         basis.bitmap( self.trxy( xy ), image) # fill="white" )
 
-    def drawFrameTriange( self, basis, w, h, col ):
-        x1y1   = (self.fx+self.x + w, self.fy+self.y-h)
-        x2y2   = (self.fx+self.x + w, self.fy+self.y)
-        basis.polygon( [(self.fx + self.x, self.fy + self.y ), x1y1, x2y2] , fill=col, outline=col )
-        # print "Location.drawFrameTriange>", self
-        #basis.polygon([(self.x, self.y), (self.x + self.width, self.y-self.height), (self.x + self.width, self.y)], outline="red", fill="red")
+    def drawFrameTriange( self, basis, geo, pc, fill ):
+        # pc is a percentage of the maximum height
+        slope = geo.h/geo.w
+        xy  = self.trxy( (geo.a, geo.b) )
+        xy1 = self.trxy( (geo.a+geo.w*pc, geo.d*slope*pc) )
+        xy2 = self.trxy( (geo.a+geo.w*pc, geo.b) )
+        basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline="white" )
 
 
     """ test code """
@@ -204,7 +239,7 @@ class internalOLED(OLEDdriver):
 
     def trabcd(self, coords):
         new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        print("trabcd from %s to %s" % (coords, new))
+        # print("trabcd from %s to %s" % (coords, new))
         return new
         # translate coordinates to screen coordinates
 
@@ -215,7 +250,27 @@ class internalOLED(OLEDdriver):
 
 class frontOLED(OLEDdriver):
     """ driver for the front 256,64 spi display """
-    pass
+    SPIPORT    = 1
+    HEIGHT     = 64
+    WIDTH      = 256
+    FPS        = 40
+
+    def __init__(self):
+        # driver = spi(port=internalOLED.I2CPORT, address=internalOLED.I2CADDRESS)
+        # OLEDdriver.__init__(self, device=ssd1306(serial, height=internalOLED.HEIGHT, width=internalOLED.WIDTH), fps=internalOLED.FPS)
+        #
+        # self.testdevice()
+        print("frontOLED.__init__> *** not implemented ***")
+
+    def trabcd(self, coords):
+        new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
+        # print("trabcd from %s to %s" % (coords, new))
+        return new
+        # translate coordinates to screen coordinates
+
+    def trxy(self, coords):
+        return (coords[0], self.device.height-coords[1]-1)
+        # translate coordinates to screen coordinates
 
 
 if __name__ == "__main__":
