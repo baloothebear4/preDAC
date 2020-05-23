@@ -20,7 +20,7 @@
 
 from oleddriver import make_font, scaleImage
 
-import os
+import os, time
 from oleddriver import internalOLED     # used for Test purposes
 from platform   import Platform         # used for Test purposes
 
@@ -497,9 +497,11 @@ def frametest():
 
     print( "testScreen initialised: ", a, p )
 
-    p.internaldisplay.draw(a.draw)
+    for i in range(10):
+        p.internaldisplay.draw(a.draw)
 
-    print( "testScreen draw executed")
+        print( "testScreen draw executed>", i)
+        time.sleep(1)
 
 def geometrytest():
 

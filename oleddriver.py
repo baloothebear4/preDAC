@@ -24,9 +24,9 @@ from luma.core.sprite_system import framerate_regulator
 def make_font(name, size):
     font_path = os.path.abspath(os.path.join( os.path.dirname(__file__), 'fonts', name))
     try:
-        return ImageFont.truetype(font_path, size)
-    except:
-            print("make_font > error, font files not found at ", font_path)
+        return ImageFont.truetype(font_path, int(size))
+    except Exception as e:
+            print("make_font > error ", e)
 
 def scaleImage(image_path, geo):
     """  scales an image to fit the frame, with the height or width changing proportionally """
@@ -60,7 +60,7 @@ class OLEDdriver(canvas):
     def __init__(self, device, fps):
         self.device     = device
         self.regulator  = framerate_regulator( fps=fps )
-        self.device.persist = True
+        self.device.persist = False
         self.readtime = []
 
     def calcDisplaytime(self,start=True):

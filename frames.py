@@ -307,105 +307,12 @@ class VolumeSourceFrame(Location):
     def drawCircle(self, basis, xc, yc, r, colour):
         basis.ellipse((xc-r, yc-r,xc+r, yc+r), outline="black", fill=colour)
 
-class VolumeAmountFrame(Location):
-    """
-        Displays a triangle filled proportional to the Volume level
-    """
-    def __init__(self, platform, size=1):  # size is a scaling factor
-        self.platform   = platform
-        Location.__init__(self, platform)
-        self.width = 120/size
-        self.height= 40/size
 
-        """ position the object in the frame """
-        self.alignBCentre()
 
-    def draw(self, basis):
-        self.alignBCentre()
-        self.drawFrameTriange( basis, self.width, self.height, "red" )
-        vol = self.platform.readVolume()
-        width  = self.width * vol / 63
-        height = (self.height * vol)/63
-        self.drawFrameTriange( basis, width, height, "white" )
 
-class SourceIconFrame(Location):
-    """
-        Displays a an Icon for the source type and animates it
-    """
-    def __init__(self, platform):  # size is a scaling factor
-        Location.__init__(self, platform)
-        self.platform       = platform
-        self.files          = {}  # dictionary of files to images
-        self.icons          = {}  # dictionary of images, sources as keys
-        self.width          = 0
 
-        """
-        Build a dict of all the icon files to be used
-        """
-        sources = self.platform.sourcesAvailable()
-        for s in sources:
-            self.files.update( {s: self.platform.getSourceIconFiles(s)} )
 
-        """
-        Build a dict of all the images, sized, positioned, ready to go
-        """
-        for s in self.files:
-            images = []
-            for f in self.files[s]:
-                img_path  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'icons', f))
-                img = self.scaleImage( Image.open(img_path), f )
-                # img = self.scaleImage( Image.open(img_path), f )
-                if img.width > self.width:
-                    self.width = img.width
-                images.append( img )
-            self.icons.update( {s : images} )
 
-        # print "SourceIcon.__init__> ready", self.width
-
-    def draw(self, basis):
-        # print "SourceIconFrame.draw>", self.platform.activeSource, self.platform.currentIcon
-        self.drawFrameCentredImage( basis, self.icons[self.platform.activeSource][self.platform.currentIcon])
-
-    def scaleImage(self, image, f):
-        """  scales an image to fit the frame, with the height or width changing proportionally """
-        """  Find out which parameter does not fit the frame """
-        # print float(image.width) / self.fwidth,  float(image.height) /self.fheight
-        if   float(image.width) / self.fwidth > float(image.height) / self.fheight:
-            wpercent = (self.fwidth/float(image.width))
-            hsize = int((float(image.height)*float(wpercent)))
-            # print "SourceIcon.scaleimage> %", hsize, f
-            return image.resize((self.fwidth, hsize), Image.ANTIALIAS)
-        else:
-            wpercent = (self.fheight/float(image.height))
-            wsize = int((float(image.width)*float(wpercent)))
-            # print "SourceIcon.scaleimage> %", wsize, f
-            return image.resize((wsize, self.fheight), Image.ANTIALIAS)
-        return image
-
-class TextFrame(Location):
-    """
-    Display a simple centred set of text
-    """
-    def __init__(self, platform, text, size):
-        Location.__init__(self, platform)
-        self.fwidth = self.swidth
-        self.text   = text
-        self.font   = make_font("arial.ttf", size)
-
-    def draw(self, basis):
-        self.drawFrameCentredText(basis, self.text, self.font)
-
-class MenuFrame(Location):
-    """
-    Display a simple the title of screen
-    """
-    def __init__(self, platform):
-        Location.__init__(self, platform)
-        self.fwidth = self.swidth
-        self.font   = make_font("arial.ttf", 12)
-
-    def draw(self, basis, text):
-        self.drawFrameTopCentredText(basis, text, self.font)
 
 
 class VolumeUnitsFrame(Location):
