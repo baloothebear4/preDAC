@@ -189,7 +189,6 @@ class OLEDdriver(canvas):
 
     def test_oled(self):
         print("OLED test full speed")
-        self.device.persist = True
         for i in range(8):
             for j in range(OLEDdriver.bars):
                 self.draw_bar(i*(OLEDdriver.bar_space+10), 32)
@@ -210,7 +209,6 @@ class OLEDdriver(canvas):
         with canvas(self.device) as draw:
 
             self.draw_bar2(draw,OLEDdriver.bar_space+4, 10)
-            self.device.persist = True
             self.draw_bar2(draw,OLEDdriver.bar_space+40, 20)
                     # time.sleep(0.2)
 
@@ -247,15 +245,43 @@ class internalOLED(OLEDdriver):
         return (coords[0], self.device.height-coords[1]-1)
         # translate coordinates to screen coordinates
 
+def getDevice(actual_args=None):
+    """
+    Create device from command-line arguments and return it.
+    """
+    if actual_args is None:
+        actual_args = sys.argv[1:]
+    parser = cmdline.create_parser(description='luma.examples arguments')
+    args = parser.parse_args(actual_args)
 
+    if args.config:
+        # load config from file
+        config = cmdline.load_config(args.config)
+        args = parser.parse_args(config + actual_args)
+
+    # create device
+    try:
+        device = cmdline.create_device(args)
+    except error.Error as e:
+        parser.error(e)
+
+    return device
+
+
+from luma.core import cmdline, error
 class frontOLED(OLEDdriver):
     """ driver for the front 256,64 spi display """
     SPIPORT    = 1
     HEIGHT     = 64
     WIDTH      = 256
     FPS        = 40
+    config        = ['-i=spi', '--width=256', '-d=ssd1322', '--spi-bus-speed=2000000']
 
     def __init__(self):
+
+        OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
+
+        self.testdevice()
         # driver = spi(port=internalOLED.I2CPORT, address=internalOLED.I2CADDRESS)
         # OLEDdriver.__init__(self, device=ssd1306(serial, height=internalOLED.HEIGHT, width=internalOLED.WIDTH), fps=internalOLED.FPS)
         #

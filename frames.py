@@ -184,36 +184,7 @@ class Bar:  # draws a filled rectangle at position x, height y
         basis.line((self.x, self.h-peak-self.yOffset, self.x + self.w, self.h-peak-self.yOffset ), fill="white")
 
 
-class SpectrumFrame(Location):
-    """
-    Creates a spectrum analyser of the width and octave interval specified
-    intervals are 1, 3 or 6
-    widths    are really half or whole screen
-    """
-    def __init__(self, platform, interval):
-        Location.__init__(self, platform)
-        self.platform   = platform
-        self.gap        = 4  # between bars
-        self.yOffset    = 0
-        self.octave     = Octave(interval, self.platform.readBinBandwidth(), self.platform.readNyquist(), self.platform.readbinCount())
-        self.numBars    = self.octave.intervalsCount()  # The number of bars is given by the Octave interval
-        self.scale      = float(self.fheight-self.yOffset)
-        self.barWidth   = None
-        self.bars       = []
-        self.barFreq    = []
 
-    def draw(self, basis):
-        if self.barWidth is None:
-            self.barWidth  = (self.fwidth/self.numBars)-self.gap# round(float(self.fwidth)/self.numBars)-self.gap
-            leftOffset     = (self.fwidth- (self.numBars*(self.barWidth+self.gap)) )/2
-            for i in range(0, self.numBars):
-                self.bars.append( Bar(i*(self.barWidth+self.gap)+ leftOffset, self.yOffset, self.barWidth, self.fheight) )
-            # print ("Spectrum.setWidth>  barWidth %d, fwidth %d, numBars %d, scale %f, actWidth %d" % (self.barWidth, self.fwidth, self.numBars, self.scale, self.numBars*(self.barWidth+self.gap)) )
-
-        freqbins = self.octave.fill( self.platform.readFreqBins() )
-        # self.label.draw(basis)
-        for i in range(0, self.numBars):
-            self.bars[i].draw(basis, float(self.scale*freqbins[i]))
 
 class VolumeSourceFrame(Location):
     """
