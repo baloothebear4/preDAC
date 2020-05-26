@@ -21,11 +21,11 @@ import pyaudio
 CHANNELS        = 2
 # INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
 INFORMAT        = pyaudio.paInt16
-RATE            = 22050*2
+RATE            = 44100
 FRAMESIZE       = 2048
 duration        = 10
 maxValue        = float(2**15)
-bars            = 30
+
 RMSNOISEFLOOR   = -66  #dB
 
 WINDOW          = 7 # 4 = Hanning
@@ -35,7 +35,8 @@ NUMPADS         = 0
 BINBANDWIDTH    = RATE/(FRAMESIZE + NUMPADS) #ie 43.5 Hz for 44.1kHz/1024
 DCOFFSETSAMPLES = 200
 
-
+""" test code """
+bars            = 30
 
 
 
@@ -118,7 +119,7 @@ class ProcessAudio(AudioData):
                 dataL       = data[0::2]
                 dataR       = data[1::2]
 
-                # self.audio['SpectrumL'] = self.packFFT(self.calcFFT(dataL))
+                self.audio['SpectrumL'] = self.packFFT(self.calcFFT(dataL))
                 self.audio['SpectrumR'] = self.packFFT(self.calcFFT(dataR))
                 self.audio['VU_L'], self.audio['Peak_L'] = self.VU(dataL)
                 self.audio['VU_R'], self.audio['Peak_R'] = self.VU(dataR)
@@ -140,14 +141,15 @@ class ProcessAudio(AudioData):
         # self.calcReadtime(False)
 
 
-    def createBands(self, spacing=OCTAVE, fcentre=FIRSTCENTREFREQ):
+    def createBands(self, spacing, fcentre=FIRSTCENTREFREQ):
         '''
         Create the upper bounds of each interval as an array that can be used to fill the fft data
+        - spacing is the octave spacing eg 3.0, 6.0
+        - fcentre is the lowest start frequency eg 31.25
         '''
-        self.octave         = spacing
         self.firstfreq      = fcentre
-        self.intervalUpperF = []
-        self.centres        = []
+        intervalUpperF = []
+        centres        = []
         print("ProcessAudio.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre))
         #
         # Loop in octaves bands
@@ -169,15 +171,15 @@ class ProcessAudio(AudioData):
                 # Check how many bins will comprise this octave band (must be at least one)
                 while (bincount+1)*BINBANDWIDTH <= intervalUpper:
                     bincount    += 1
-                self.intervalUpperF.append( intervalUpper )
-                self.centres.append( fcentre )
+                intervalUpperF.append( intervalUpper )
+                centres.append( fcentre )
 
             # print " Fcentre %2.1f, Upper bound %2.1f, startbin %d (%4.0fHz), to bin %d (%4.0fHz)" % (fcentre, intervalUpper, startbin, startbin * BINBANDWIDTH, bincount, bincount * BINBANDWIDTH )
             startbin = bincount+1
 
 
-        print("ProcessAudio.createBands>  %d bands determined: %s" % (len(self.centres), self.centres))
-        return self.intervalUpperF
+        print("ProcessAudio.createBands>  %d bands determined: %s" % (len(centres), centres))
+        return intervalUpperF
 
     def VU(self,data):
         """ normalise to 0-1 """
@@ -185,9 +187,7 @@ class ProcessAudio(AudioData):
         OFFSET= 110
 
         peak = (20*math.log( np.abs(np.max(data)-np.min(data)), 10 )+OFFSET)/SCALE
-        # vu   = self.floor((math.log( self.rms(data)/self.rms(maxValue), 10)+offset),0)
         vu   = (20*math.log( self.rms(data), 10)+OFFSET)/SCALE
-
 
         return (vu,peak)
 
@@ -231,7 +231,7 @@ class ProcessAudio(AudioData):
         return r1
 
 
-    def packFFT(self,bins):
+    def packFFT(self,bins,):
         '''
         # Pack bins into octave intervals
         # Convert amplitude into dBs
@@ -251,20 +251,20 @@ class ProcessAudio(AudioData):
 
         return spectrumBands
 
-    def printSpectrum(self, left=True):
-        FFACTOR = math.pow(2, 1.0/float(2*self.octave) )
+    def printSpectrum(self, octave, intervalUpperF, left=True):
+        FFACTOR = math.pow(2, 1.0/float(2*octave) )
         if left:
             power = self.audio['SpectrumL']
         else:
             power = self.audio['SpectrumR']
 
         for i in range (0,len(power)):
-            fCentre = self.intervalUpperF[i]/FFACTOR
-            self.printPower(power[i], self.intervalUpperF[i]/FFACTOR)
+            fCentre = intervalUpperF[i]/FFACTOR
+            self.printPower(power[i], intervalUpperF[i]/FFACTOR)
         print("--------------")
 
-    def getSpectrum(self, left=True):
-        FFACTOR = math.pow(2, 1.0/float(2*self.octave) )
+    def getSpectrum(self, octave, intervalUpperF, left=True):
+        FFACTOR = math.pow(2, 1.0/float(2*octave) )
         if left:
             power = self.audio['SpectrumL']
         else:
@@ -272,7 +272,7 @@ class ProcessAudio(AudioData):
 
         channelPower = []
         for i in range (0,len(power)):
-            fCentre = self.intervalUpperF[i]/FFACTOR
+            fCentre = intervalUpperF[i]/FFACTOR
             channelPower.append(self.filter(power[i], fCentre))
         return channelPower
 
@@ -312,15 +312,10 @@ class ProcessAudio(AudioData):
     def rms(self, y):
         return np.abs(np.mean(np.square(y)))
 
-    ''' test functions '''
 
-    def printBins(bins):
-        text  = ""
-        for i in range (1,len(bins)):
-            text += "[%2d %2.1f] " % (i*BINBANDWIDTH, bins[i]/250)
-            if i >MAXBANDS: break
-        print(text)
 
+
+    """ test code """
 
     def LR2(self, audio):
 
@@ -329,7 +324,12 @@ class ProcessAudio(AudioData):
         print(("[%s]=L%10f-^%10f^%10f\t%10f R=[%s]"% (lString, audio['VU_L'], audio['Peak_L'], audio['Peak_L'], audio['VU_R'], rString)))
         # print("L=[%s]\tR=[%s]"%(lString, rString))
 
-
+    def printBins(bins):
+        text  = ""
+        for i in range (1,len(bins)):
+            text += "[%2d %2.1f] " % (i*BINBANDWIDTH, bins[i]/250)
+            if i >50: break
+        print(text)
 
 def main():
     # main loop

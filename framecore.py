@@ -20,7 +20,7 @@
 
 from oleddriver import make_font, scaleImage
 
-import os
+import os, time
 from oleddriver import internalOLED     # used for Test purposes
 from platform   import Platform         # used for Test purposes
 
@@ -324,34 +324,7 @@ class Frame(Geometry):
 
 
 
-""" test code """
 
-class Frame_1(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='right')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.outline( device, self, outline="blue")
-        self.display.drawFrameCentredText( device, self, "frame 1 test", self.font)
-
-class Frame_2(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='centre')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.drawFrameTopCentredText( device, self, "frame 2 is rather long", self.font)        # self.display.rectangle( device, self.coords, outline="blue")
-
-
-class Frame_3(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,1.0), Valign='bottom', Halign='right')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.outline( device, self, outline="blue")
-        pass
 
 class VolumeAmountFrame(Frame):
     """
@@ -476,6 +449,80 @@ class VUScreen(Frame):
         self += TextFrame(display.boundary, platform, display, "45")
         self.check()
 
+class SpectrumFrame(Frame):
+    """
+    Creates a spectrum analyser of the width and octave interval specified
+    intervals are 1, 3 or 6
+    widths    are really half or whole screen
+    """
+    BARGAP    = 4  # between bars
+
+    def __init__(self, bounds, platform, display, channel, scale):
+        self.channel = channel
+        if channel == 'left':
+            self.ch_text = 'L'
+        elif channel == 'right':
+            self.ch_text = 'R'
+        else:
+            raise ValueError('VUFrame.__init__> unknown channel', channel)
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(scale, 1.0), Valign="top", Halign=channel)
+        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
+
+        self.octave     = Octave(interval, self.platform.readBinBandwidth(), self.platform.readNyquist(), self.platform.readbinCount())
+        self.numBars    = self.octave.intervalsCount()  # The number of bars is given by the Octave interval
+        self.scale      = float(self.fheight-self.yOffset)
+        self.barWidth   = None
+        self.bars       = []
+        self.barFreq    = []
+
+    def draw(self, basis):
+        if self.barWidth is None:
+            self.barWidth  = (self.fwidth/self.numBars)-self.gap# round(float(self.fwidth)/self.numBars)-self.gap
+            leftOffset     = (self.fwidth- (self.numBars*(self.barWidth+self.gap)) )/2
+            for i in range(0, self.numBars):
+                self.bars.append( Bar(i*(self.barWidth+self.gap)+ leftOffset, self.yOffset, self.barWidth, self.fheight) )
+            # print ("Spectrum.setWidth>  barWidth %d, fwidth %d, numBars %d, scale %f, actWidth %d" % (self.barWidth, self.fwidth, self.numBars, self.scale, self.numBars*(self.barWidth+self.gap)) )
+
+        freqbins = self.octave.fill( self.platform.readFreqBins() )
+        # self.label.draw(basis)
+        for i in range(0, self.numBars):
+            self.bars[i].draw(basis, float(self.scale*freqbins[i]))
+
+
+
+"""
+    Frame & Geometry Test code
+"""
+
+
+class Frame_1(Frame):
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='right')
+        self.font = make_font("arial.ttf", 11)
+
+    def draw(self, device):
+        self.display.outline( device, self, outline="blue")
+        self.display.drawFrameCentredText( device, self, "frame 1 test", self.font)
+
+class Frame_2(Frame):
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='centre')
+        self.font = make_font("arial.ttf", 11)
+
+    def draw(self, device):
+        self.display.drawFrameTopCentredText( device, self, "frame 2 is rather long", self.font)        # self.display.rectangle( device, self.coords, outline="blue")
+
+
+class Frame_3(Frame):
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,1.0), Valign='bottom', Halign='right')
+        self.font = make_font("arial.ttf", 11)
+
+    def draw(self, device):
+        self.display.outline( device, self, outline="blue")
+        pass
+
 class testScreen(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
@@ -497,9 +544,11 @@ def frametest():
 
     print( "testScreen initialised: ", a, p )
 
-    p.internaldisplay.draw(a.draw)
+    for i in range(10):
+        p.internaldisplay.draw(a.draw)
 
-    print( "testScreen draw executed")
+        print( "testScreen draw executed>", i)
+        time.sleep(1)
 
 def geometrytest():
 
