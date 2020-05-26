@@ -1,0 +1,12 @@
+
+disable_splash=1
+hdmi_drive=2
+dtparam=i2c_arm=off
+dtparam=i2s=on
+dtparam=audio=off
+enable_uart=1
+pi3-disable-bt
+dtparam=spi=on
+dtoverlay=rpi-dac
+dtoverlay=gpio-poweroff,gpiopin=4,active_low=0
+dtoverlay=lirc-rpi,gpio_in_pin=2
