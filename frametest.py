@@ -10,47 +10,54 @@
 """
 
 from framecore import Geometry, Frame
+from frames import *
+from platform import Platform
+import time
 
 """
     Frame & Geometry Test code
 """
 
-
-
 class Frame_1(Frame):
-    def __init__(self, device):
-        Frame.__init__(self, boundswh=[64,32], scalers=(1.0,0.5), Valign='top', Halign='left')
-        print("Frame_a>", self)
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.5), Valign='top', Halign='right')
+        self.font   = make_font("arial.ttf", self.h*0.5)
 
-    def draw(self, device):
-        print("Frame_a.draw> can't draw")
+
+    def draw(self, basis):
+        # self.display.outline( basis, self, outline="white")
+        self.display.drawFrameLVCentredtext(basis, self, "Frame 1", self.font)
+        print("Frame_1.draw>", self)
 
 class Frame_2(Frame):
-    def __init__(self, device):
-        Frame.__init__(self,boundswh=(64,32), scalers=(1.0,0.5), Valign='bottom', Halign='left') )
-        print("Frame_b>", self)
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self,platform=platform, bounds=bounds, display=display, scalers=(1.0,0.5), Valign='bottom', Halign='left')
+        self.font   = make_font("arial.ttf", self.h*0.5)
 
-    def draw(self, device):
-        print("Frame_b.draw> can't draw")
+    def draw(self, basis):
+        self.display.outline( basis, self, outline="white")
+        self.display.drawFrameLVCentredtext(basis, self, "Frame 2", self.font)
+        print("Frame_2.draw>", self)
 
-class testScreen1(Screen):
+class testScreen1(Frame):
     def __init__(self):
         Screen.__init_()
-        self.screen += Frame_a(V='bottom', H='left')
-        self.screen += Frame_b(V='bottom', H='left')
+        self.screen += Frame_1(V='bottom', H='left')
+        self.screen += Frame_2(V='bottom', H='left')
         self.check()
 
-class testVUScreen(Frame):
+class testScreen(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
-        self += Frame_1(display.boundary, platform, display)
+        # self += Frame_1(display.boundary, platform, display)
         # self += Frame_2(display.boundary, platform, display)
         # self += VolumeAmountFrame(display.boundary, platform, display)
 
-        self += TextFrame(display.boundary, platform, display, "Welcome")
+        # self += TextFrame(display.boundary, platform, display, 'middle', "Welcome")
         # self += MenuFrame(display.boundary, platform, display)
         # self += SourceIconFrame(display.boundary, platform, display)
-        self += VUScreen(platform, display)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.5, 'right')
+        # self += VU2chFrame(display.boundary, platform, display, 0.5)
         self.check()
 
 def frametest(display):
@@ -58,6 +65,7 @@ def frametest(display):
     # frames = (VolumeAmountFrame, TextFrame, MenuFrame, SourceIconFrame, VUFrame, SpectrumFrame)   # create a list of all screens to test one by one
     scaled_frames = (VUVFrame, SpectrumFrame)
     # frames = (VU2chFrame, VUV2chFrame, Spectrum2chFrame)
+    limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
 
     p = Platform()
     if display=='int':
@@ -65,13 +73,30 @@ def frametest(display):
     else:
         d = p.frontdisplay
 
-    for f in scaled_frames:
-        a = f(p, d, 1.0)
-        print( "%s initialised: %s" % (type(i).__name__, a) )
-        d.draw(a.draw)
+    geo   = Geometry(d.boundary)
+    geo.scale( (1.0, 1.0) )   # make the  Screen scale width
+    # for f in scaled_frames:
+    # f = VUV2chFrame
+    # # a = f(geo.coords, p, d, 'left', limits )
+    # a = f(geo.coords, p, d, 0.3 )
 
-        print( "%s drawn: %s" % (type(i).__name__, a) )
-        time.sleep(3)
+    # f = SpectrumFrame
+    # a = f(geo.coords, p, d, 'left', 0.4 )
+    # print( "%s initialised: %s" % (type(f).__name__, a) )
+    # f = Spectrum2chFrame
+    # a = f(geo.coords, p, d, 1.0 )
+    # print( "%s initialised: %s" % (type(f).__name__, a) )
+
+    f = VolumeSourceFrame
+    a = f(geo.coords, p, d, 0.5, 'right' )
+
+    a = testScreen(p, d)
+    print( "%s initialised: %s" % (type(f).__name__, a) )
+
+    d.draw(a.draw)
+
+    print( "Drawn: %s" % ( a) )
+    # time.sleep(3)
 
     #
     #
@@ -88,23 +113,23 @@ def frametest(display):
     #     print( "testScreen draw executed>", i)
     #     time.sleep(1)
 
-def screentest():
-
-    screens = ()
-    p = Platform()
-    print ("Platform initialised>", p)
-    if display=='int':
-        d = p.internaldisplay
-    else:
-        d = p.frontdisplay
-
-    for i in range(len(screens):
-        a = testVUScreen(p, d, 0.6)
-        print( "%s initialised: %s" % (type(i).__name__, a) )
-        d.draw(a.draw)
-
-        print( "%s drawn: %s" % (type(i).__name__, a) )
-        time.sleep(3)
+# def screentest():
+#
+#     screens = ()
+#     p = Platform()
+#     print ("Platform initialised>", p)
+#     if display=='int':
+#         d = p.internaldisplay
+#     else:
+#         d = p.frontdisplay
+#
+#     for i in range(len(screens):
+#         a = testVUScreen(p, d, 0.6)
+#         print( "%s initialised: %s" % (type(i).__name__, a) )
+#         d.draw(a.draw)
+#
+#         print( "%s drawn: %s" % (type(i).__name__, a) )
+#         time.sleep(3)
 
 """
 Extensive test of geometry scenarios, including overlap tests
@@ -198,6 +223,6 @@ def geometrytest():
 if __name__ == "__main__":
     try:
         geometrytest()
-        frametest()
+        frametest('int')
     except KeyboardInterrupt:
         pass

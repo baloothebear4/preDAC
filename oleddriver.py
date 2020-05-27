@@ -56,7 +56,7 @@ class OLEDdriver(canvas):
     def __init__(self, device, fps):
         self.device     = device
         self.regulator  = framerate_regulator( fps=fps )
-        self.device.persist = False
+        self.device.persist = True
         self.readtime = []
 
     def calcDisplaytime(self,start=True):
@@ -83,6 +83,10 @@ class OLEDdriver(canvas):
             with canvas(self.device) as c:
                 screen(c)
         self.calcDisplaytime(False)
+
+    def textsize(self, text, font):
+        with canvas(self.device) as c:
+            return c.textsize(text, font)
 
     @property
     def boundary(self):
@@ -170,12 +174,13 @@ class OLEDdriver(canvas):
 
     def trabcd(self, coords):
         new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        # print("trabcd from %s to %s" % (coords, new))
+        print("trabcd from %s to %s" % (coords, new))
         return new
         # translate coordinates to screen coordinates
 
     def trxy(self, coords):
         return (coords[0], self.device.height-coords[1]-1)
+        print("trabcd from %s to %s" % (coords, (coords[0], self.device.height-coords[1]-1)))
         # translate coordinates to screen coordinates
 
 
@@ -229,11 +234,11 @@ class frontOLED(OLEDdriver):
 
     def __init__(self):
 
-        OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
+        # OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
         print("***check out the non command line version")
 
-        # driver = spi(port=frontOLED.SPIPORT)
-        # OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
+        driver = spi(port=frontOLED.SPIPORT)
+        OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
         #
         self.testdevice()
         print("frontOLED.__init__> initialised")

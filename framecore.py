@@ -105,10 +105,13 @@ class Geometry():
         return self.normxy( ( (self.c+self.a)/2, (self.d+self.b)/2) )
 
     def resize(self, wh):
+
         self.a = self._bounds[0]
         self.b = self._bounds[1]
         self.c = wh[0]
         self.d = wh[1]
+        print("resize by ", wh, "to", self)
+
 
     """ calculating the size will need to be more dynamic if the drawing could exceed the bounds """
     def size(self, abcd):
@@ -120,6 +123,7 @@ class Geometry():
         leave the bottom, left as is and change the top, right accordingly
     """
     def scale(self, scalers):
+        print("scale by", scalers," from ", (self._bounds[2], self._bounds[3]),", to, ",[ int(self._bounds[2] * scalers[0]), int(scalers[1] * self._bounds[3]) ] )
         self.resize( [ int(self._bounds[2] * scalers[0]), int(scalers[1] * self._bounds[3]) ] )
 
     """ move the frame relative to the top/right or bottom/left corners """
@@ -222,7 +226,7 @@ class Frame(Geometry):
             self.move_cd( (self.c, self.bounds.d) )
             # move so that self.d = self.bounds.d
         elif self.V == 'middle':
-            self.move_middle( self.bounds.d/2 )
+            self.move_middle( int(self.bounds.d/2) )
             # move so that middle(self) = middle(self.bounds) : middle =
         elif self.V == 'bottom':
             self.move_ab( (self.a, self.bounds.b) )
@@ -234,7 +238,7 @@ class Frame(Geometry):
             self.move_ab( (self.bounds.a, self.b) )
             # move so that self.a = self.bounds.a
         elif self.H == 'centre':
-            self.move_centre( self.bounds.c/2)
+            self.move_centre( int(self.bounds.c/2))
             # move so that centre(self) = centre(self.bounds)
         elif self.H == 'right':
             self.move_cd( (self.bounds.c, self.d) )
@@ -300,14 +304,15 @@ class Frame(Geometry):
     #         return False
 
     def check(self):
-        print("%s Frame overlap check - takes time...>" % type(self).__name__)
+        print("%s Frame overlap check for...>" % type(self).__name__)
         ok = True
-        for f1 in self.frames:
+        for index, f1 in enumerate(self.frames):
             if f1 == self: continue
-            if f1 != f2:
-                if f1.overlaps(f2):
-                    print('Frame.check> frame %s overlaps %s' %(type(f1).__name__, type(f2).__name__) )
-                    ok = False
+            if index+1 == len(self.frames): break
+            f2 = self.frames[index+1]
+            if f1.overlaps(f2):
+                print('Frame.check> frame %s overlaps %s' % (type(f1).__name__, type(f2).__name__) )
+                ok = False
         return ok
 
 #End of Frame class

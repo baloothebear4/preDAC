@@ -38,15 +38,11 @@ DCOFFSETSAMPLES = 200
 
 class AudioData():
     def __init__(self):
-        self.audio = {  'SpectrumL'   : [],
-                        'SpectrumR'   : [],
-                        'VU_L'        : 0.0,
-                        'VU_R'        : 0.0,
-                        'Peak_L'      : 0.0,
-                        'Peak_R'      : 0.0 }
+        data          = [0.5]*25
+        self.vu       = {'left': 0.5, 'right':0.6}
+        self.peak     = {'left': 0.8, 'right':0.9}
+        self.spectrum = {'left': data, 'right': data}
 
-    # def filter(self,signal, fc):
-    #     return  3.0*signal - (10.0 + 5*39/fc)
     def filter(self, signal, fc):
         return signal
 
@@ -69,7 +65,7 @@ class AudioData():
         # print("Right VU       >%f" % self.audio['VU_R'])
         # print("Left Peak      >%f" % self.audio['Peak_L'])
         # print("Right Peak     >%f" % self.audio['Peak_R'])
-        self.LR2(self.audio)
+        self.LR2(self.vu, self.peak)
 
 
 class ProcessAudio(AudioData):
@@ -110,10 +106,10 @@ class ProcessAudio(AudioData):
                 dataL       = data[0::2]
                 dataR       = data[1::2]
 
-                self.spectrum['left']  = self.packFFT(self.calcFFT(dataL), intervals)
-                self.spectrum['right'] = self.packFFT(self.calcFFT(dataR), intervals)
-                self.vu['left'], self.peak['left']  = self.VU(dataL)
-                self.vu['left'], self.peak['right'] = self.VU(dataR)
+                # self.spectrum['left']  = self.packFFT(self.calcFFT(dataL), intervals)
+                # self.spectrum['right'] = self.packFFT(self.calcFFT(dataR), intervals)
+                # self.vu['left'], self.peak['left']  = self.VU(dataL)
+                # self.vu['left'], self.peak['right'] = self.VU(dataR)
 
                 # self.seeData(dataL,"left")
                 # self.seeData(dataR,"right")
@@ -250,9 +246,9 @@ class ProcessAudio(AudioData):
     def printSpectrum(self, octave, intervalUpperF, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*octave) )
         if left:
-            power = self.audio['SpectrumL']
+            power = self.spectrum['left']
         else:
-            power = self.audio['SpectrumR']
+            power = self.spectrum['right']
 
         for i in range (0,len(power)):
             fCentre = intervalUpperF[i]/FFACTOR
@@ -262,9 +258,9 @@ class ProcessAudio(AudioData):
     def getSpectrum(self, octave, intervalUpperF, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*octave) )
         if left:
-            power = self.audio['SpectrumL']
+            power = self.spectrum['left']
         else:
-            power = self.audio['SpectrumR']
+            power = self.spectrum['right']
 
         channelPower = []
         for i in range (0,len(power)):
@@ -313,11 +309,10 @@ class ProcessAudio(AudioData):
 
     """ test code """
 
-    def LR2(self, audio):
-
-        lString = "-"*int(bars-audio['VU_L']*bars)+"#"*int(audio['VU_L']*bars)
-        rString = "#"*int(audio['VU_R']*bars)+"-"*int(bars-audio['VU_R']*bars)
-        print(("[%s]=L%10f-^%10f^%10f\t%10f R=[%s]"% (lString, audio['VU_L'], audio['Peak_L'], audio['Peak_L'], audio['VU_R'], rString)))
+    def LR2(self, vu, peak):
+        lString = "-"*int(bars-vu['left']*bars)+"#"*int(vu['left']*bars)
+        rString = "#"*int(vu['right']*bars)+"-"*int(bars-vu['right']*bars)
+        print(("[%s]=L%10f-^%10f^%10f\t%10f R=[%s]"% (lString, vu['left'], peak['left'], peak['right'], vu['right'], rString)))
         # print("L=[%s]\tR=[%s]"%(lString, rString))
 
     def printBins(bins):

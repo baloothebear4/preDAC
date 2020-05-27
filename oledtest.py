@@ -46,3 +46,10 @@ def draw_screen(self,data):
             for i in range(bars):
                 self.draw_bar2(c, i, 32*(35+data[i])/110 )
     self.calcDisplaytime(False)
+
+
+if __name__ == "__main__":
+    try:
+        draw_screen
+    except KeyboardInterrupt:
+        pass

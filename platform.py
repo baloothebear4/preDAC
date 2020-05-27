@@ -15,6 +15,7 @@
 
 from oleddriver  import internalOLED, frontOLED
 from hwinterface import AudioBoard, ControlBoard, RemoteController, VolumeBoard
+from processaudio import ProcessAudio
 
 class Volume():
     def __init__(self):
@@ -113,20 +114,20 @@ class Source:
         # print "Source.nextIcon>", self.currentIcon,     len(Source.IconFiles[self.activeSource])
 
 
-
-class Audio():
-    def __init__(self):
-        testdata      = [0.5]*25
-        self.vu       = {'left': 0.6, 'right':0.6}
-        self.peak     = {'left': 0.8, 'right':0.9}
-        self.spectrum = {'left': testdata, 'right': testdata}
-
-class Platform(Volume, Source, Audio, AudioBoard):
+class Platform(Volume, Source, ProcessAudio, AudioBoard):
     """ this is the HW abstraction layer and includes the device handlers and data model """
     def __init__(self):
         Volume.__init__(self)
         Source.__init__(self, self.sourceLogic, self.setSource)
-        Audio.__init__(self)
+        ProcessAudio.__init__(self)
+
+        # test data
+        testdataL      = [0.5]*50
+        testdataR      = [0.3]*50
+        self.vu       = {'left': 0.6, 'right':0.6}
+        self.peak     = {'left': 0.8, 'right':0.9}
+        self.spectrum = {'left': testdataL, 'right': testdataR}
+        
         try:
             self.internaldisplay   = internalOLED()
         except:
