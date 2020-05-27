@@ -261,25 +261,16 @@ class Frame(Geometry):
 
     """ goes through the frames to see if they overlap  """
     """ test if the frame overlaps the one given        """
-    # def overlaps(self, f):
-    #     if   self.a < f.c and self.c > f.a:
-    #         print('Frame.overlap: left side overlap a<c* and c>a*', self.a, f.c, self.c, f.a)
-    #         return True
-    #     elif self.c > f.a:
-    #         print('Frame.overlap: right side overlap c>a',self.c, f.c )
-    #         return True
-    #     elif self.b < f.d:
-    #         print('Frame.overlap: bottom side overlap b<d', self.b, f.d)
-    #         return True
-    #     elif self.d > f.b:
-    #         print('Frame.overlap: top side overlap d>b', self.d, f.b)
-    #         return True
-    #     else:
-    #         return False
-    #     return True
+    def overlaps(self, f):
+        print("Frame.overlap> SRC algorithm")
+        if   self.c >= f.a and f.c>= self.a and self.d >= f.b and f.d >= self.b:
+            print('Frame.overlap> detected')
+            return True
+        else:
+            return False
 
     # def overlaps(self, f):  #l1, r1, l2, r2):
-    #
+    #        print("Frame.overlap> import algorithm")
     #     # If one rectangle is on left side of other
     #     if(self.a >= f.c or f.a >= self.c):
     #         print("left/right overlap")
@@ -293,350 +284,30 @@ class Frame(Geometry):
     #     return False
 
     # alternative algorithm that uses heavy lifting and shows the exact coordinates that overlap
-    def overlaps(self, f):
-        a = [[x, y] for x in [x1 for x1 in range(self.a , self.c )] for y in [y1 for y1 in range(self.b , self.d )]]
-        b = [[x, y] for x in [x for x in range(f.a , f.c )] for y in [y for y in range(f.b , f.d )]]
-
-        # print ("%s =%s\n%s =%s" %(self, a, f, b))
-
-        overlaps = [ bcoords for bcoords in b if bcoords in a]
-
-        if len(overlaps) > 0:
-            print('Frame.overlap: at ',overlaps)
-            return True
-        else:
-            return False
+    # def overlaps(self, f):
+            # print("Frame.overlap> SRC brute force algorithm")
+    #     a = [[x, y] for x in [x1 for x1 in range(self.a , self.c )] for y in [y1 for y1 in range(self.b , self.d )]]
+    #     b = [[x, y] for x in [x for x in range(f.a , f.c )] for y in [y for y in range(f.b , f.d )]]
+    #
+    #     # print ("%s =%s\n%s =%s" %(self, a, f, b))
+    #
+    #     overlaps = [ bcoords for bcoords in b if bcoords in a]
+    #
+    #     if len(overlaps) > 0:
+    #         print('Frame.overlap: at ',overlaps)
+    #         return True
+    #     else:
+    #         return False
 
     def check(self):
         print("%s Frame overlap check - takes time...>" % type(self).__name__)
         ok = True
         for f1 in self.frames:
             if f1 == self: continue
-            for f2 in self.frames:
-                if f2 == self: continue
-                if f1 != f2:
-                    if f1.overlaps(f2):
-                        print('Frame.check> frame %s overlaps %s' %(type(f1).__name__, type(f2).__name__) )
-                        ok = False
+            if f1 != f2:
+                if f1.overlaps(f2):
+                    print('Frame.check> frame %s overlaps %s' %(type(f1).__name__, type(f2).__name__) )
+                    ok = False
         return ok
 
 #End of Frame class
-
-
-
-
-
-class VolumeAmountFrame(Frame):
-    """
-        Displays a triangle filled proportional to the Volume level
-    """
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(0.5,1.0), Valign='middle', Halign='left')
-
-    def draw(self, device):
-        self.display.drawFrameTriange( device, self, 1.0, fill="black" )
-        vol = self.platform.volume_percent
-        self.display.drawFrameTriange( device, self, vol, fill="white" )
-
-class TextFrame(Frame):
-    """
-        Display a simple centred set of text
-    """
-    def __init__(self, bounds, platform, display, text=''):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.4,0.4), Valign='middle', Halign='right')
-        self.text   = text
-        self.font   = make_font("arial.ttf", self.h)
-
-    def draw(self, basis):
-        self.display.drawFrameCentredText(basis, self, self.text, self.font)
-
-class MenuFrame(Frame):
-    """
-        Display a simple the title of screen, as an overlay
-    """
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.4), Valign='top', Halign='centre')
-        self.font   = make_font("arial.ttf", self.h)
-
-    def draw(self, basis):
-        text = self.platform.screenname
-        self.display.drawFrameCentredText(basis, self, text, self.font)
-
-class SourceIconFrame(Frame):
-    """
-        Displays a an Icon for the source type and animates it
-    """
-    def __init__(self, bounds, platform, display):  # size is a scaling factor
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,1.0), Valign='bottom', Halign='left')
-        self.files          = {}  # dictionary of files to images
-        self.icons          = {}  # dictionary of images, sources as keys
-
-        #Build a dict of all the icon files to be used
-        sources = self.platform.sourcesAvailable()
-        for s in sources:
-            self.files.update( {s: self.platform.getSourceIconFiles(s)} )
-
-        print("source files>", self.files)
-        #Build a dict of all the images, sized, positioned, ready to go
-        for s in self.files:
-            images = []
-            for f in self.files[s]:
-                img_path  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'icons', f))
-                img = scaleImage( img_path, self )
-                # if img.width > self.w:
-                #     self.w = img.width
-                images.append( img )
-            self.icons.update( {s : images} )
-
-        # print( "SourceIcon.__init__> ready", self.icons)
-
-    def draw(self, basis):
-        print ("SourceIconFrame.draw>", self.platform.activeSource, self.platform.currentIcon)
-        self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource][self.platform.currentIcon])
-
-class VUFrame(Frame):
-    """
-        Displays a horizontal bar with changing colours at the top
-        - side is str 'left' or 'right'
-        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
-    """
-    BARHEIGHT    = 0.6  # % of frame height
-    TEXTGAP      = 1.5   # % of text width left bar starts
-    PEAKBARWIDTH = 1  # pixels
-
-    def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
-        self.limits  = limits
-        self.channel = channel
-        if channel == 'left':
-            self.ch_text = 'L'
-            V    = 'top'
-        elif channel == 'right':
-            self.ch_text = 'R'
-            V    = 'bottom'
-        else:
-            raise ValueError('VUFrame.__init__> unknown channel', channel)
-
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 0.5), Valign=V, Halign='left')
-        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
-
-    def draw(self, basis):
-        self.display.outline( basis, self, outline="white")
-        self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
-        vu      = self.platform.vu[self.channel]
-        w, h    = basis.textsize(self.ch_text, self.font)
-        xoffset = w*VUFrame.TEXTGAP
-        maxw    = self.w-xoffset
-        wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
-
-        for limit in self.limits:
-            self.display.drawFrameMiddlerect(basis, self, limit[1], wh, xoffset)
-            if vu < limit[0]: break  #otherwise do the next colour
-            xoffset = w*VUFrame.TEXTGAP + maxw * limit[0]
-            wh[0]   = maxw * (vu - limit[0])
-
-        xoffset = w*VUFrame.TEXTGAP + maxw * self.platform.peak[self.channel]
-        wh      = [VUFrame.PEAKBARWIDTH, self.h*VUFrame.BARHEIGHT]
-        self.display.drawFrameMiddlerect(basis, self, 'white', wh, xoffset)
-
-class VUScreen(Frame):
-    def __init__(self, platform, display, scale):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )   # make the VU Screen half width
-        Frame.__init__(self, geo.coords, platform, display)
-        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
-        self += VUFrame(geo.coords, platform, display, 'left', limits )
-        self += VUFrame(geo.coords, platform, display, 'right', limits )
-        self += TextFrame(display.boundary, platform, display, "45")
-        self.check()
-
-class SpectrumFrame(Frame):
-    """
-    Creates a spectrum analyser of the width and octave interval specified
-    intervals are 1, 3 or 6
-    widths    are really half or whole screen
-    """
-    BARGAP    = 4  # between bars
-
-    def __init__(self, bounds, platform, display, channel, scale):
-        self.channel = channel
-        if channel == 'left':
-            self.ch_text = 'L'
-        elif channel == 'right':
-            self.ch_text = 'R'
-        else:
-            raise ValueError('VUFrame.__init__> unknown channel', channel)
-
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(scale, 1.0), Valign="top", Halign=channel)
-        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
-
-        self.octave     = Octave(interval, self.platform.readBinBandwidth(), self.platform.readNyquist(), self.platform.readbinCount())
-        self.numBars    = self.octave.intervalsCount()  # The number of bars is given by the Octave interval
-        self.scale      = float(self.fheight-self.yOffset)
-        self.barWidth   = None
-        self.bars       = []
-        self.barFreq    = []
-
-    def draw(self, basis):
-        if self.barWidth is None:
-            self.barWidth  = (self.fwidth/self.numBars)-self.gap# round(float(self.fwidth)/self.numBars)-self.gap
-            leftOffset     = (self.fwidth- (self.numBars*(self.barWidth+self.gap)) )/2
-            for i in range(0, self.numBars):
-                self.bars.append( Bar(i*(self.barWidth+self.gap)+ leftOffset, self.yOffset, self.barWidth, self.fheight) )
-            # print ("Spectrum.setWidth>  barWidth %d, fwidth %d, numBars %d, scale %f, actWidth %d" % (self.barWidth, self.fwidth, self.numBars, self.scale, self.numBars*(self.barWidth+self.gap)) )
-
-        freqbins = self.octave.fill( self.platform.readFreqBins() )
-        # self.label.draw(basis)
-        for i in range(0, self.numBars):
-            self.bars[i].draw(basis, float(self.scale*freqbins[i]))
-
-
-
-"""
-    Frame & Geometry Test code
-"""
-
-
-class Frame_1(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='right')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.outline( device, self, outline="blue")
-        self.display.drawFrameCentredText( device, self, "frame 1 test", self.font)
-
-class Frame_2(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='centre')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.drawFrameTopCentredText( device, self, "frame 2 is rather long", self.font)        # self.display.rectangle( device, self.coords, outline="blue")
-
-
-class Frame_3(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,1.0), Valign='bottom', Halign='right')
-        self.font = make_font("arial.ttf", 11)
-
-    def draw(self, device):
-        self.display.outline( device, self, outline="blue")
-        pass
-
-class testScreen(Frame):
-    def __init__(self, platform, display):
-        Frame.__init__(self, display.boundary, platform, display)
-        self += Frame_1(display.boundary, platform, display)
-        # self += Frame_2(display.boundary, platform, display)
-        # self += VolumeAmountFrame(display.boundary, platform, display)
-
-        self += TextFrame(display.boundary, platform, display, "Welcome")
-        # self += MenuFrame(display.boundary, platform, display)
-        # self += SourceIconFrame(display.boundary, platform, display)
-        self += VUScreen(platform, display)
-        self.check()
-
-
-def frametest():
-    p = Platform()
-    # a = testScreen(p, p.internaldisplay)
-    a = VUScreen(p, p.internaldisplay, 0.6)
-
-    print( "testScreen initialised: ", a, p )
-
-    for i in range(10):
-        p.internaldisplay.draw(a.draw)
-
-        print( "testScreen draw executed>", i)
-        time.sleep(1)
-
-def geometrytest():
-
-    b = [0,0,64,32]
-    g = Geometry(b)
-    print("Geometry initialised>", g)
-
-    g.a = 1
-    g.b = 2
-    g.c = 3
-    g.d = 4
-    print("Geometry coords changed>", g)
-
-    try:
-        g.a = -1
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception ",e)
-
-    try:
-        g.b = 200
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception ",e)
-
-    try:
-        g.c = 300
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception ",e)
-
-    try:
-        g.d = -3
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception ",e)
-
-
-    print("Geometry: w %s, h %s, wh %s, abcd %s, xy %s > %s" % (g.w, g.h, g.wh, g.abcd, g.xy, g))
-
-
-    try:
-        g.resize([30,100])
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception (illegal resize)",e)
-
-
-    scale=[0.8, 0.8]
-    print("Scale and Resize by %s >from %s" % (scale, g))
-    g.scale(scale )
-    print(" to ", g)
-
-    try:
-        g.scale( [0.8, 1.3] )
-        print("Geometry coords changed>", g)
-    except Exception as e:
-        print("Geometry exception (illegal scale)",e)
-
-    """ move the frame relative to the top/right or bottom/left corners """
-    g.resize([10,10])
-    print("resize to ", g)
-    xy = [0,15]
-    g.move_ab(xy)
-    print(" Move ab %s to %s" % (xy, g))
-
-    xy = [20,20]
-    g.move_cd(xy)
-    print(" Move cd %s to %s> size %s" % (xy, g, g.wh))
-
-    xy = [10,18]
-    g.move_middle(xy[1])
-    print(" Move middle %s to %s> size %s" % (xy[1], g, g.wh) )
-    g.move_centre(xy[0])
-    print(" Move centre %s to %s> size %s" % (xy[0], g, g.wh) )
-
-    print("Check the geometry is still legal", g.check())
-
-    g = Geometry([10,10,100,100])
-    g.scale([0.5,0.5])
-    print("new geometry ", g)
-    print("Get the absolute coordinates, normalised to the screen>", g.coords )
-
-    print("All Geometry tests passed\n")
-
-if __name__ == "__main__":
-    try:
-        geometrytest()
-        frametest()
-    except KeyboardInterrupt:
-        pass

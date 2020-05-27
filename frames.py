@@ -8,7 +8,7 @@
  Part of mVista preDAC
 
  v1.0 Baloothebear4 Sept 17 - Original
- v2.0 Baloothebear4 May 20  - Re-factored to use Frame class, simplifying & cleaning up
+ v2.0 Baloothebear4  May 20 - Re-factored to use Frame class, simplifying & cleaning up
 
 """
 
@@ -21,139 +21,6 @@ from luma.core.render import canvas
 
 from oleddriver import make_font
 
-
-class ActualScreen:
-    """ facts about the actual display including its size """
-    def __init__(self, platform):
-        self.swidth  = platform.device.width  #baseline coordinates - rightmost position
-        self.sheight = platform.device.height
-
-
-class Frame(ActualScreen):
-    """ facts about a frame including its size, which sits on the display and contains
-        screen one or more screen objects that are placed in the frame
-    """
-    def __init__(self, platform):
-        ActualScreen.__init__(self, platform) # Each frame sits on the screen
-        self.fwidth  = self.swidth            # baseline size, frame is full screen
-        self.fheight = self.sheight
-        self.fx      = 0                      # coordiantes of the frame top left corner on the screen
-        self.fy      = 0
-
-    def sizeFrame(self, width, height):
-        self.fwidth  = width  # baseline coordinates - rightmost position
-        self.fheight = height
-
-    """ where object is a screen class with inherited frame class """
-    def alignLeftOf(self, frame):
-        # self.fwidth = self.swidth - frame.fwidth
-        self.fx     = frame.fx-self.fwidth
-        # print "Frame.alignLeftOf", self
-        if self.fx < 0:
-            print "Frame.alignLeftOf> error insufficient screen width", self
-
-    def alignRightOf(self, frame):
-        if frame.x-self.fwidth >= 0:
-            self.fx = frame.fx-self.fwidth
-            # print "Frame.alignRightOf", self
-        else:
-            print "Frame.alignLeftOf> error insufficient screen width", self
-
-
-    """ Alignments, relative to screen, assume drawing a rectangle with the coordinates in the top LH corner
-        NB:  Frames are always full height """
-    def alignFrameLeft(self):
-        self.fx = 0
-        # print "Frame.alignFrameLeft", self
-
-    def setMaxFrameWidthLeftTo(self, frame):
-        self.fx      = 0
-        self.fwidth  = frame.fx
-        # print "Frame.alignFrameLeft", self
-
-    def alignFrameRight(self):
-        if self.fwidth  <= self.swidth:
-            self.fx = self.swidth-self.fwidth
-            # print "Frame.alignFrameRight", self
-        else:
-            print "Frame.alignFrameRight> error insufficient screen width", self
-
-
-class Location(Frame):
-    """
-        Manages the positional information relating to the screen objects
-        NB shifts to lower left as 0,0 not upper left
-
-        Manages the relative position of an object on a frame, the frame defaults to the whole screen
-        Works on the basis of plotting rectangular objects, which have width & height
-
-        NB:  (0,0) is top left corner and all coordinates are relative to the frame
-        Hence greatly simplifies, drawing objects at relative positions as object size changes
-    """
-    def __init__(self, platform):
-        Frame.__init__(self, platform)
-        self.platform     = platform
-        self.x            = 0   # position of the object on the frame
-        self.y            = 0
-        self.width        = 0
-        self.height       = 0
-
-        self.top          = 0
-        self.bottom       = self.sheight
-
-
-
-
-    """ Alignments, relative to frame, assume drawing a rectangle with the coordinates in the top LH corner """
-    def alignLeft(self):
-        self.x = self.fx
-
-    def alignRight(self):
-        if self.fwidth>self.width:
-            self.x = self.fwidth-self.width
-        else:
-            print "Location.alignRight> insufficient frame width"
-
-    def alignTop(self):
-        self.y = 0
-
-    def alignBottom(self):
-        if self.fheight>self.height:
-            self.y = self.fheight-self.height
-        else:
-            print "Location.alignBottom> insufficient frame height"
-
-    def alignAbove(self, obj):
-        if obj.height>self.height:
-            self.y = obj.height-self.height
-        else:
-            print "Location.alignAbove> insufficient frame height"
-
-    def alignBelow(self, obj):
-        if obj.y+obj.height+self.height<self.fheight:
-            self.y = obj.y+obj.height
-        else:
-            print "Location.alignBelow> insufficient frame height"
-
-    def alignTCentre(self):   #top LH corner
-        self.x = (self.fwidth  - self.width)/2
-        self.y = (self.fheight - self.height)/2
-
-    def alignBCentre(self):   # bottom LH corner
-        self.x = (self.fwidth  - self.width)/2
-        self.y = (self.fheight + self.height)/2
-
-    def __repr__(self):
-        print "Location object: ", self
-
-    def __str__(self):  # may need to be a __repr__
-        text  = "Location Object:\n"
-        text += " %20s : %d, %d\n" % ('Screen (w, h)', self.swidth, self.sheight)
-        text += " %20s : %d, %d\n" % ('Object (x, y)', self.x, self.y)
-        text += " %20s : %d, %d\n" % ('Object (w, h)', self.width, self.height)
-        text += " %20s : %d, %d\n" % ('Frame (x, y)',  self.fx, self.fy)
-        text += " %20s : %d, %d\n" % ('Frame (w, h)',  self.fwidth,self.fheight)
-        return text
 
 class Bar:  # draws a filled rectangle at position x, height y
     topOffset = 5
@@ -185,11 +52,12 @@ class Bar:  # draws a filled rectangle at position x, height y
 
 
 
-
-class VolumeSourceFrame(Location):
+class VolumeSourceFrame(Frame):
     """
-    Simple numeric display of the current volume level as value 0-63
-    number is centred.
+    *** needs implementing ***
+
+        Simple numeric display of the current volume level as value 0-63
+        number is centred.
     """
     def __init__(self, platform, topOffset=8):
         Location.__init__(self, platform)
@@ -279,62 +147,225 @@ class VolumeSourceFrame(Location):
         basis.ellipse((xc-r, yc-r,xc+r, yc+r), outline="black", fill=colour)
 
 
-
-
-
-
-
-
-
-class VolumeUnitsFrame(Location):
+class VolumeAmountFrame(Frame):
     """
-    AKA : VU meter, note the peak is also displayed too
+        Displays a triangle filled proportional to the Volume level
     """
-    gap      = 2
-    yOffset  = 0
-    barWidth = 10
-    text     = "  VU"
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(0.5,1.0), Valign='middle', Halign='left')
 
-    def __init__(self, platform):
-        Location.__init__(self, platform)
-        self.platform = platform
-        self.font     = make_font("arial.ttf", 12)
-        self.fwidth   = 2*(VolumeUnitsFrame.barWidth + VolumeUnitsFrame.gap)
-        self.height   = self.fheight
-        self.VU       = None
-        self.scale    = (self.height-VolumeUnitsFrame.yOffset)
+    def draw(self, device):
+        self.display.drawFrameTriange( device, self, 1.0, fill="black" )
+        vol = self.platform.volume_percent
+        self.display.drawFrameTriange( device, self, vol, fill="white" )
 
-        self.label = Label(self.x, VolumeUnitsFrame.text, self.fy )
-        self.alignLeft()
-        # print "VolumeUnitsFrame.__init__>", self
+class TextFrame(Frame):
+    """
+        Display a simple centred set of text
+    """
+    def __init__(self, bounds, platform, display, text=''):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.4,0.4), Valign='middle', Halign='right')
+        self.text   = text
+        self.font   = make_font("arial.ttf", self.h)
 
     def draw(self, basis):
-        if self.VU is None:
-            self.VU = { 'Left'  : Bar( self.x, VolumeUnitsFrame.yOffset, VolumeUnitsFrame.barWidth, self.height),
-                        'Right' : Bar( self.x+ VolumeUnitsFrame.barWidth+VolumeUnitsFrame.gap, VolumeUnitsFrame.yOffset, VolumeUnitsFrame.barWidth, self.height )
-                      }
-        Vrms = self.platform.readVrms()
-        Vpeak= self.platform.readVpeak()
-        # print "VU draw> rms", Vrms, (self.height-VolumeUnitsFrame.yOffset)*Vrms['Left']*self.scale, (self.height-VolumeUnitsFrame.yOffset)*Vrms['Right']*self.scale
-        # print "VU draw> peak", Vpeak, Vpeak['Left'], (self.height-VolumeUnitsFrame.yOffset)*Vpeak['Left']*self.scale
-        self.VU['Left'].drawPeak( basis, Vrms['Left']*self.scale, Vpeak['Left']*self.scale)
-        self.VU['Right'].drawPeak( basis, Vrms['Right']*self.scale, Vpeak['Right']*self.scale)
-        # self.label.draw(basis)
+        self.display.drawFrameCentredText(basis, self, self.text, self.font)
 
-class Label:
+class MenuFrame(Frame):
     """
-    add label - deprecated ---> not used as this is not a full height frame
+        Display a simple the title of screen, as an overlay
     """
-    def __init__(self, x, text, screenHeight):
-        self.x    = x
-        self.text = text
-        self.font = make_font("arial.ttf", 10)
-        self.showing = 0
-        self.h       = screenHeight
+    def __init__(self, bounds, platform, display):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.4), Valign='top', Halign='centre')
+        self.font   = make_font("arial.ttf", self.h)
 
     def draw(self, basis):
-        if not self.showing:
-            w, h = basis.textsize(text=self.text, font=self.font)
-            y = self.h-h
-            basis.text((self.x, y), text=self.text, font=self.font, fill="grey")
-            self.showing != self.showing
+        text = self.platform.screenname
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class SourceIconFrame(Frame):
+    """
+        Displays a an Icon for the source type and animates it
+    """
+    def __init__(self, bounds, platform, display):  # size is a scaling factor
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,1.0), Valign='bottom', Halign='left')
+        self.files          = {}  # dictionary of files to images
+        self.icons          = {}  # dictionary of images, sources as keys
+
+        #Build a dict of all the icon files to be used
+        sources = self.platform.sourcesAvailable()
+        for s in sources:
+            self.files.update( {s: self.platform.getSourceIconFiles(s)} )
+
+        print("source files>", self.files)
+        #Build a dict of all the images, sized, positioned, ready to go
+        for s in self.files:
+            images = []
+            for f in self.files[s]:
+                img_path  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'icons', f))
+                img = scaleImage( img_path, self )
+                # if img.width > self.w:
+                #     self.w = img.width
+                images.append( img )
+            self.icons.update( {s : images} )
+
+        # print( "SourceIcon.__init__> ready", self.icons)
+
+    def draw(self, basis):
+        print ("SourceIconFrame.draw>", self.platform.activeSource, self.platform.currentIcon)
+        self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource][self.platform.currentIcon])
+
+class VUFrame(Frame):
+    """
+        Displays a horizontal bar with changing colours at the top
+        - side is str 'left' or 'right'
+        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
+    """
+    BARHEIGHT    = 0.6  # % of frame height
+    TEXTGAP      = 1.5   # % of text width left bar starts
+    PEAKBARWIDTH = 1  # pixels
+
+    def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
+        self.limits  = limits
+        self.channel = channel
+        if channel == 'left':
+            self.ch_text = 'L'
+            V    = 'top'
+        elif channel == 'right':
+            self.ch_text = 'R'
+            V    = 'bottom'
+        else:
+            raise ValueError('VUFrame.__init__> unknown channel', channel)
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 0.5), Valign=V, Halign='left')
+        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
+
+    def draw(self, basis):
+        self.display.outline( basis, self, outline="white")
+        self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
+        vu      = self.platform.vu[self.channel]
+        w, h    = basis.textsize(self.ch_text, self.font)
+        xoffset = w*VUFrame.TEXTGAP
+        maxw    = self.w-xoffset
+        wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
+
+        for limit in self.limits:
+            self.display.drawFrameMiddlerect(basis, self, limit[1], wh, xoffset)
+            if vu < limit[0]: break  #otherwise do the next colour
+            xoffset = w*VUFrame.TEXTGAP + maxw * limit[0]
+            wh[0]   = maxw * (vu - limit[0])
+
+        xoffset = w*VUFrame.TEXTGAP + maxw * self.platform.peak[self.channel]
+        wh      = [VUFrame.PEAKBARWIDTH, self.h*VUFrame.BARHEIGHT]
+        self.display.drawFrameMiddlerect(basis, self, 'white', wh, xoffset)
+
+class VUVFrame(Frame):
+    """
+        Displays a vertical bar with changing colours at the top
+        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
+        - sits within a screen to compile two together
+        - uses full screen height
+    """
+    BARWIDTH     = 0.5  # % of frame width
+    XSCALE       = 0.4  # width of the frame in the parent
+    BARHEIGHT    = 1.0  # % of frame height
+    PEAKBARHEIGHT= 1
+
+    def __init__(self, bounds, platform, display, limits):  # size is a scaling factor
+        self.limits  = limits
+        self.channel = channel
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(VUVFrame.XSCALE, 1.0), Valign='bottom', Halign=channel)
+        self.barwidth = int(self.w * VUVFrame.BARWIDTH)
+        self.maxh     = self.h * VUVFrame.BARHEIGHT
+
+    def draw(self, basis):
+        self.display.outline( basis, self, outline="white")
+        vu      = self.platform.vu[self.channel]
+        wh      = [self.barwidth, self.self.maxh*vu]
+        yoffset = 0
+
+        for limit in self.limits:
+            self.display.drawFrameCentrerect(basis, self, limit[1], wh, yoffset)
+            if vu < limit[0]: break  #otherwise do the next colour
+            yoffset = self.maxh * limit[0]
+            wh[1]   = self.maxh * (vu - limit[0])
+
+        # add the peak bar
+        yoffset = self.maxh * self.platform.peak[self.channel]
+        wh      = [self.barwidth, VUVFrame.PEAKBARHEIGHT]
+        self.display.drawFrameCentrerect( basis, self, 'white', wh, yoffset)
+
+
+class SpectrumFrame(Frame):
+    """
+    Creates a spectrum analyser of the width and octave interval specified
+    intervals are 1, 3 or 6
+    widths    are really half or whole screen
+    - scale is used to determine how wide the frame is as a % of the parent frame
+    - channel 'left' or 'right' selects the audio channel and screen alignment
+    """
+    BARGAP    = 2  # between bars
+    BARW      = 3  # width of a bar
+
+    def __init__(self, bounds, platform, display, channel, scale):
+        self.channel = channel
+        if channel == 'left':
+            self.ch_text = 'L'
+        elif channel == 'right':
+            self.ch_text = 'R'
+        else:
+            raise ValueError('SpectrumFrame.__init__> unknown channel', channel)
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(scale, 1.0), Valign="top", Halign=channel)
+
+        # Calculate how many bars can be drawn in the width available
+        # Determine the max octave fraction that can be accomodated
+        # Set up the number function to pack the samples
+
+        self.max_bars   = int(self.w/(SpectrumFrame.BARGAP+SpectrumFrame.BARW))
+        for spacing in (6, 3, 2, 1): #go down from the finest to the coarsest to find one that fits
+            self.bar_freqs = platform.createBands(spacing)
+            self.bars      = len(bar_freqs)
+            if  self.bars <= self.max_bars: break
+
+        print("SpectrumFrame.__init__> max bars=%d, octave spacing=1/%d, num bars=%d" % (self.max_bars, spacing, self.bars))
+
+    def draw(self, basis):
+        self.platform.process(self.bar_freqs)
+        for x in range(0, SpectrumFrame.BARGAP+SpectrumFrame.BARW, self.numBars):
+            self.platform.drawFrameBar(basis, self, x, self.platform.spectrum[self.channel], SpectrumFrame.BARW, "white" )
+
+class VU2chFrame(Frame):
+    def __init__(self, platform, display, scale):
+        geo   = Geometry(display.boundary)
+        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
+        Frame.__init__(self, geo.coords, platform, display)
+        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
+        self += VUFrame(geo.coords, platform, display, 'left', limits )
+        self += VUFrame(geo.coords, platform, display, 'right', limits )
+        self += TextFrame(display.boundary, platform, display, "45")
+        self.check()
+
+class VUV2chFrame(Frame):
+    def __init__(self, platform, display, scale):
+        geo   = Geometry(display.boundary)
+        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
+        Frame.__init__(self, geo.coords, platform, display)
+        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
+        self += VUVFrame(geo.coords, platform, display, 'left', limits )
+        self += VUVFrame(geo.coords, platform, display, 'right', limits )
+        self += TextFrame(display.boundary, platform, display, "45")
+        self.check()
+
+class Spectrum2chFrame(Frame):
+    def __init__(self, platform, display, scale):
+        geo   = Geometry(display.boundary)
+        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
+        Frame.__init__(self, geo.coords, platform, display)
+        self += SpectrumFrame(geo.coords, platform, display, 'left' )
+        self += SpectrumFrame(geo.coords, platform, display, 'right' )
+        # self += TextFrame(display.boundary, platform, display, "45")
+        self.check()
+
+""" Screen classes - these are top level frames comprising frames of frames at full display size """

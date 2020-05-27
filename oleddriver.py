@@ -48,14 +48,10 @@ def scaleImage(image_path, geo):
     return image
 
 class OLEDdriver(canvas):
-    oled_height = 32
-    oled_width  = 128
-    bottom      = oled_height
-    top         = 0
-    bar_width   = 3
-    bar_gap     = 2
-    bar_space   = bar_gap + bar_width
-    bars        = int(oled_width / bar_space)
+    """
+        Base class to control the drawing primatives to the screen
+        - maps the geometry across
+    """
 
     def __init__(self, device, fps):
         self.device     = device
@@ -103,6 +99,14 @@ class OLEDdriver(canvas):
         coords = (geo.a+xoffset, geo.centre[1]-wh[1]/2, geo.a+xoffset+wh[0], geo.centre[1]+wh[1]/2)
         basis.rectangle(self.trabcd(coords), fill=fill)
 
+    def drawFrameCentrerect(self, basis, geo, fill, wh, yoffset):
+        """ xoffset is how far from the left side to draw the rect
+            size is set to the given height"""
+        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        coords = (geo.centre[0]-wh[0]/2, geo.b+yoffset, geo.centre[0]+wh[0]/2, geo.b+wh[1]+yoffset)
+        basis.rectangle(self.trabcd(coords), fill=fill)
+
     def drawFrameLVCentredtext(self, basis, geo, text, font):
         w, h = basis.textsize(text=text, font=font)
         if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
@@ -143,32 +147,9 @@ class OLEDdriver(canvas):
         xy2 = self.trxy( (geo.a+geo.w*pc, geo.b) )
         basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline="white" )
 
-
-    """ test code """
-    def draw_bar(self,col, h):
-        with canvas(self.device) as draw:
-            draw.rectangle((col, OLEDdriver.oled_height-h, col + OLEDdriver.bar_width, OLEDdriver.bottom), outline="blue", fill="white")
-        # print "draw_bar at ", col," ",h
-    def draw_line(self,col, h):
-        with canvas(self.device) as draw:
-            draw.line((col, OLEDdriver.oled_height-h, col + OLEDdriver.bar_width, OLEDdriver.bottom), fill="white")
-
-    def draw_bar2(self,draw, col, h):
-        ''' draws up to 32 pixels high, OLED.bar wide '''
-        x = col * OLEDdriver.bar_space
-        draw.rectangle((x, OLEDdriver.oled_height-h, x + OLEDdriver.bar_width, OLEDdriver.bottom), outline="blue", fill="blue")
-
-    def draw_screen(self,data):
-        self.calcDisplaytime()
-        # print("OLEDdriver.draw_screen> ", data)
-        bars = OLEDdriver.bars
-        if len(data)< OLEDdriver.bars: bars = len(data)
-
-        with self.regulator:
-            with canvas(self.device) as c:
-                for i in range(bars):
-                    self.draw_bar2(c, i, 32*(35+data[i])/110 )
-        self.calcDisplaytime(False)
+    def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
+        coords = (geo.a+x, geo.b, geo.a+x+w, geo.b+geo.d*ypc)
+        basis.rectangle( self.trabcd(coords), fill=fill)
 
     def draw_status(self, vol, source, mute, gain, headphonedetect):
         """ simple dignostic to see the current source channel and volume setting """
@@ -187,37 +168,15 @@ class OLEDdriver(canvas):
 
         self.calcDisplaytime(False)
 
-    def test_oled(self):
-        print("OLED test full speed")
-        for i in range(8):
-            for j in range(OLEDdriver.bars):
-                self.draw_bar(i*(OLEDdriver.bar_space+10), 32)
-                # time.sleep(0.00002)
-        print("OLED testing done")
-        # time.sleep(4)
+    def trabcd(self, coords):
+        new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
+        # print("trabcd from %s to %s" % (coords, new))
+        return new
+        # translate coordinates to screen coordinates
 
-    def test_oled2(self):
-        print("OLED test full speed")
-        with canvas(self.device) as draw:
-            for j in range(OLEDdriver.bars):
-                print("draw at col", j)
-                for i in range(OLEDdriver.oled_height):
-                    self.draw_bar2(draw,j*OLEDdriver.bar_space+4, i)
-                    time.sleep(0.2)
-
-    def test_oled3(self):
-        with canvas(self.device) as draw:
-
-            self.draw_bar2(draw,OLEDdriver.bar_space+4, 10)
-            self.draw_bar2(draw,OLEDdriver.bar_space+40, 20)
-                    # time.sleep(0.2)
-
-    def test_oled4(self):
-        with self.regulator:
-            with canvas(self.device) as c:
-                self.draw_bar2(c,1,1)
-                self.draw_bar2(c,3,10)
-                self.draw_bar2(c,25,32)
+    def trxy(self, coords):
+        return (coords[0], self.device.height-coords[1]-1)
+        # translate coordinates to screen coordinates
 
 
 class internalOLED(OLEDdriver):
@@ -235,15 +194,6 @@ class internalOLED(OLEDdriver):
         self.testdevice()
         print("internalOLED.__init__> display initialised")
 
-    def trabcd(self, coords):
-        new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        # print("trabcd from %s to %s" % (coords, new))
-        return new
-        # translate coordinates to screen coordinates
-
-    def trxy(self, coords):
-        return (coords[0], self.device.height-coords[1]-1)
-        # translate coordinates to screen coordinates
 
 def getDevice(actual_args=None):
     """
@@ -280,23 +230,23 @@ class frontOLED(OLEDdriver):
     def __init__(self):
 
         OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
+        print("***check out the non command line version")
 
-        self.testdevice()
-        # driver = spi(port=internalOLED.I2CPORT, address=internalOLED.I2CADDRESS)
-        # OLEDdriver.__init__(self, device=ssd1306(serial, height=internalOLED.HEIGHT, width=internalOLED.WIDTH), fps=internalOLED.FPS)
+        # driver = spi(port=frontOLED.SPIPORT)
+        # OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
         #
-        # self.testdevice()
-        print("frontOLED.__init__> *** not implemented ***")
+        self.testdevice()
+        print("frontOLED.__init__> initialised")
 
-    def trabcd(self, coords):
-        new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        # print("trabcd from %s to %s" % (coords, new))
-        return new
-        # translate coordinates to screen coordinates
-
-    def trxy(self, coords):
-        return (coords[0], self.device.height-coords[1]-1)
-        # translate coordinates to screen coordinates
+    # def trabcd(self, coords):
+    #     new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
+    #     # print("trabcd from %s to %s" % (coords, new))
+    #     return new
+    #     # translate coordinates to screen coordinates
+    #
+    # def trxy(self, coords):
+    #     return (coords[0], self.device.height-coords[1]-1)
+    #     # translate coordinates to screen coordinates
 
 
 if __name__ == "__main__":

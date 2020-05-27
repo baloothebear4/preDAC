@@ -35,10 +35,6 @@ NUMPADS         = 0
 BINBANDWIDTH    = RATE/(FRAMESIZE + NUMPADS) #ie 43.5 Hz for 44.1kHz/1024
 DCOFFSETSAMPLES = 200
 
-""" test code """
-bars            = 30
-
-
 
 class AudioData():
     def __init__(self):
@@ -79,11 +75,6 @@ class AudioData():
 class ProcessAudio(AudioData):
     def __init__(self):
         # set up audio input
-        # self.recorder = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE, mode=alsaaudio.PCM_NORMAL)
-        # self.recorder.setchannels(CHANNELS)
-        # self.recorder.setrate(int(RATE))
-        # self.recorder.setformat(INFORMAT)
-        # self.recorder.setperiodsize(FRAMESIZE)
         self.recorder = pyaudio.PyAudio()
         self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE)
 
@@ -96,10 +87,10 @@ class ProcessAudio(AudioData):
 
         self.window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
         # self.window     = np.blackman(FRAMESIZE)
-        self.createBands()
+        # self.createBands()
         print("ProcessAudio: reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
 
-    def process(self):
+    def process(self, intervals):
         '''
         Wait for the frame to be ready, then process the Samples
         '''
@@ -119,10 +110,10 @@ class ProcessAudio(AudioData):
                 dataL       = data[0::2]
                 dataR       = data[1::2]
 
-                self.audio['SpectrumL'] = self.packFFT(self.calcFFT(dataL))
-                self.audio['SpectrumR'] = self.packFFT(self.calcFFT(dataR))
-                self.audio['VU_L'], self.audio['Peak_L'] = self.VU(dataL)
-                self.audio['VU_R'], self.audio['Peak_R'] = self.VU(dataR)
+                self.spectrum['left']  = self.packFFT(self.calcFFT(dataL), intervals)
+                self.spectrum['right'] = self.packFFT(self.calcFFT(dataR), intervals)
+                self.vu['left'], self.peak['left']  = self.VU(dataL)
+                self.vu['left'], self.peak['right'] = self.VU(dataR)
 
                 # self.seeData(dataL,"left")
                 # self.seeData(dataR,"right")
@@ -138,7 +129,7 @@ class ProcessAudio(AudioData):
 
                 retry += 1
 
-        # self.calcReadtime(False)
+        self.calcReadtime(False)
 
 
     def createBands(self, spacing, fcentre=FIRSTCENTREFREQ):
@@ -189,7 +180,7 @@ class ProcessAudio(AudioData):
         peak = (20*math.log( np.abs(np.max(data)-np.min(data)), 10 )+OFFSET)/SCALE
         vu   = (20*math.log( self.rms(data), 10)+OFFSET)/SCALE
 
-        return (vu,peak)
+        return (vu, peak)
 
 
     """ use this to shift the noise floor eg: RMS 20 - 5000 -> 0->5000"""
@@ -231,7 +222,7 @@ class ProcessAudio(AudioData):
         return r1
 
 
-    def packFFT(self,bins,):
+    def packFFT(self, bins, intervalUpperF):
         '''
         # Pack bins into octave intervals
         # Convert amplitude into dBs
@@ -239,17 +230,22 @@ class ProcessAudio(AudioData):
         startbin = 1 #do not use bin[0] which is DC
         spectrumBands = []
 
-        for band in self.intervalUpperF:  # collect bins at a time
+        for band in intervalUpperF:  # collect bins at a time
             bincount    = startbin
 
             while bincount*BINBANDWIDTH <= band:
                 bincount    += 1
 
             level = 20*np.log10((bins[startbin:bincount].mean()))
-            spectrumBands.append( level )
+            spectrumBands.append( self.normalise(level) )
             startbin = bincount
 
         return spectrumBands
+
+    def normalise(self, level):
+        """ convert from dB into a percentage """
+        """ need to calibrate this more carefully """
+        return (35 + level)/110
 
     def printSpectrum(self, octave, intervalUpperF, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*octave) )

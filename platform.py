@@ -116,8 +116,10 @@ class Source:
 
 class Audio():
     def __init__(self):
-        self.vu   = {'left': 0.6, 'right':0.6}
-        self.peak = {'left': 0.8, 'right':0.9}
+        testdata      = [0.5]*25
+        self.vu       = {'left': 0.6, 'right':0.6}
+        self.peak     = {'left': 0.8, 'right':0.9}
+        self.spectrum = {'left': testdata, 'right': testdata}
 
 class Platform(Volume, Source, Audio, AudioBoard):
     """ this is the HW abstraction layer and includes the device handlers and data model """
@@ -125,12 +127,24 @@ class Platform(Volume, Source, Audio, AudioBoard):
         Volume.__init__(self)
         Source.__init__(self, self.sourceLogic, self.setSource)
         Audio.__init__(self)
-        self.internaldisplay   = internalOLED()
-        self.frontdisplay      = frontOLED()
+        try:
+            self.internaldisplay   = internalOLED()
+        except:
+            print("Platform.__init__> failed to start internal display")
 
-        """ need to work out how the hw boards are combined for cross functionality """
+        try:
+            self.frontdisplay      = frontOLED()
+        except:
+                print("Platform.__init__> failed to start front display")
 
     def __str__(self):
-        return "Platform> status: displays  %s, %s" % (type(self.internaldisplay).__name__, type(self.frontdisplay).__name__)
+        text = ">"
+        if self.internaldisplay is not None:
+            text += type(self.internaldisplay).__name__
+
+        if self.frontdisplay is not None:
+            text += " >" + type(self.frontdisplay).__name__
+        # return "Platform> status: displays  %s, %s" % (type(self.internaldisplay).__name__, type(self.frontdisplay).__name__)
+        return "Platform> status: displays  %s" % ( text )
 
 # end Platform
