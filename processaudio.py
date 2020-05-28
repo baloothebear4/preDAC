@@ -86,7 +86,7 @@ class ProcessAudio(AudioData):
         # self.createBands()
         print("ProcessAudio: reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
 
-    def process(self, intervals):
+    def captureAudio(self):
         '''
         Wait for the frame to be ready, then process the Samples
         '''
@@ -106,10 +106,10 @@ class ProcessAudio(AudioData):
                 dataL       = data[0::2]
                 dataR       = data[1::2]
 
-                # self.spectrum['left']  = self.packFFT(self.calcFFT(dataL), intervals)
-                # self.spectrum['right'] = self.packFFT(self.calcFFT(dataR), intervals)
-                # self.vu['left'], self.peak['left']  = self.VU(dataL)
-                # self.vu['left'], self.peak['right'] = self.VU(dataR)
+                self.samples['left']   = self.calcFFT(dataL)
+                self.samples['right']  = self.calcFFT(dataR)
+                self.process()
+
 
                 # self.seeData(dataL,"left")
                 # self.seeData(dataR,"right")
@@ -122,11 +122,14 @@ class ProcessAudio(AudioData):
             except Exception as e:
                 print("ProcessAudio.process> Failed decode ", e)
                 self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE)
-
                 retry += 1
 
         self.calcReadtime(False)
 
+    def process(self, intervals):
+        self.vu['left'], self.peak['left']  = self.VU(dataL)
+        self.vu['left'], self.peak['right'] = self.VU(dataR)
+        # other functions to calculate DC offset, noise level, silence, RMS quiet etc can go here
 
     def createBands(self, spacing, fcentre=FIRSTCENTREFREQ):
         '''
@@ -218,11 +221,12 @@ class ProcessAudio(AudioData):
         return r1
 
 
-    def packFFT(self, bins, intervalUpperF):
+    def packFFT(self, intervalUpperF, channel):
         '''
         # Pack bins into octave intervals
         # Convert amplitude into dBs
         '''
+        bins = self.samples[channel]
         startbin = 1 #do not use bin[0] which is DC
         spectrumBands = []
 

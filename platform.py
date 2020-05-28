@@ -119,14 +119,14 @@ class Platform(Volume, Source, ProcessAudio, AudioBoard):
     def __init__(self):
         Volume.__init__(self)
         Source.__init__(self, self.sourceLogic, self.setSource)
-        # ProcessAudio.__init__(self)
+        ProcessAudio.__init__(self)
 
         # test data
-        testdataL      = [0.5]*50
-        testdataR      = [0.3]*50
-        self.vu       = {'left': 0.6, 'right':0.6}
-        self.peak     = {'left': 0.8, 'right':0.9}
-        self.spectrum = {'left': testdataL, 'right': testdataR}
+        # testdataL      = [0.5]*50
+        # testdataR      = [0.3]*50
+        # self.vu       = {'left': 0.6, 'right':0.6}
+        # self.peak     = {'left': 0.8, 'right':0.9}
+        # self.spectrum = {'left': testdataL, 'right': testdataR}
 
         try:
             self.internaldisplay   = internalOLED()

@@ -1,51 +1,30 @@
 #!/usr/bin/env python
 """
- Display classes:
-    - base screens
-    - screen classes & object mangement
-    - display driver control
+
+    preDAC is the top level package which instantiates the main classes
+    and implements the control logic
 
  Part of mVista preDAC
 
- Baloothebear4 Sept 17
- test
-
+ v1.0 Baloothebear4 Sept 17
+ v2.0 Baloothebear4 May  20
 
 """
 
-# ToDo
-#  - object placement
-#  - spectrum analyser
-#  - mVista integration
-#  - menus
 
-
-from hwinterface import HWInterface
-from octave import Octave
-from screenframes import *
-
-import os
-import sys
-import random
-import RPi.GPIO as GPIO
 from events import Events
-from PIL import ImageFont
-
-from luma.core.render import canvas
-from luma.core.sprite_system import framerate_regulator
-
-import logging
 import time
 
-from luma.core import cmdline, error
+from platform import Platform
+from frames import *
 
-# logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)-15s - %(message)s'
-)
-# ignore PIL debug messages
-logging.getLogger("PIL").setLevel(logging.ERROR)
+# # logging
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format='%(asctime)-15s - %(message)s'
+# )
+# # ignore PIL debug messages
+# logging.getLogger("PIL").setLevel(logging.ERROR)
 
 class Timer:
     """
@@ -107,13 +86,9 @@ class Timer:
     # 	print "Timer.Table> ",
 
 
-
-
-
-
-class Platform(Source, HWInterface):
-    config        = ['-i=spi', '--width=256', '-d=ssd1322', '--spi-bus-speed=2000000']   # this is the base data for the OLED configuration
-    refreshRate   = 30 # max fps
+class Controller():
+    """ Main control logic managing events and callbacks """
+    # timer constants
     volchangeTime = 2.0
     srcChangeTime = 2.0
     iconMoveTime  = 0.2
@@ -121,15 +96,15 @@ class Platform(Source, HWInterface):
     welcomeTime   = 3.0
     screensaveTime= 6.0
     shutdownTime  = 1.0   # slight pause to ensure the shutdown screen is displayed
+
     loopdelay     = 0.0001
 
     def __init__(self):
 
-        GPIO.setwarnings(False)
-        """ Setup the display handling capability"""
-        self.device     = self.getDevice( Platform.config )
-        self.regulator  = framerate_regulator( fps=Platform.refreshRate )
-        print "Platform.__init__> device OK"
+        """ Setup the HW, Displays and audio processing """
+        self.platform      = Platform()
+        self.int_disp      = self.platform.internaldisplay
+        self.front_display = self.platform. frontdisplay
 
         """ Setup the event handling capability """
         self.events         = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'RemotePress', 'Pause', 'Start', 'Stop', 'ScreenSaving'))
@@ -157,7 +132,6 @@ class Platform(Source, HWInterface):
         self.activeScreen   = 'start'
         self.preScreenSaver = self.baseScreen
 
-        print "Platform.__init__> events OK"
         """ Set up the screen objects to be used """
         self.screens    = {}  # placeholder for the screen objects
         self.screenList = {'main'         : { 'class' : MainScreen, 'base' : 'yes', 'title' : '1/3 Oct Spectrum Analyser, Dial & source' },
@@ -168,22 +142,23 @@ class Platform(Source, HWInterface):
                            'sourceVol'    : { 'class' : SourceVolScreen,'base' : 'yes', 'title' : 'Source Icons & Volume Dial' },
                            'screenTitle'  : { 'class' : ScreenTitle, 'base' : 'no', 'title' : 'Displays screen titles for menu' },
                            'screenSaver'  : { 'class' : ScreenSaver, 'base' : 'no', 'title' : 'all gone quiet' },
-                           'sourceVUVol'  : { 'class' : SourceVUVolScreen, 'base' : 'yes', 'title' : ' Source Icons, VU & Vol Dial' }
+                           'sourceVUVol'  : { 'class' : SourceVUVolScreen, 'base' : 'yes', 'title' : ' Source Icons, VU & Vol Dial' },
+                           'spectrum'     : { 'class' : SpectrumScreen, 'base' : 'yes', 'title' : ' left channel spectrum and volume'},
+                           'VUScreen'     : { 'class' : VUScreen, 'base' : 'yes', 'title' : ' horizontal VU'},
+                           'VUVertScreen' : { 'class' : VUVScreen, 'base' : 'yes', 'title' : ' vertical VU'}
                            }
-        for name, c in self.screenList.iteritems():
+        for name, c in self.screenList.enumerate():
             self.screens.update( {name : c['class'](self) })
-        print "Platform.__init__> screens initialised OK"
+            print("Platform.__init__> screen %s initialised OK" % name)
 
         """ Menu functionality """
         self.menuMode = False
         self.menuSequence = {}
         pos = 0
-        for name, c in self.screenList.iteritems():
+        for name, c in self.screenList.enumerate():
             if c['base'] == 'yes':
                 self.menuSequence.update( {name : pos })
                 pos += 1
-
-
 
         print "Platform.__init__> all OK"
 
@@ -353,175 +328,36 @@ class Platform(Source, HWInterface):
         print "Platform.Shutdown> event ", e
 
 
-class MainScreen:   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
-        """ create the screen frames """
-        self.volumeSource  = VolumeSourceFrame( platform )
-        # self.volumeA     = VolumeAmountFrame( platform )
 
-        self.spectrum    = SpectrumFrame( platform, interval=3)
-
-        """ position them """
-        # print "MainScreen> align volume source"
-        self.volumeSource.alignFrameRight()
-        # print "MainScreen> align spectrum"
-        self.spectrum.setMaxFrameWidthLeftTo( self.volumeSource )
-        self.spectrum.alignLeft()
-        # print "MainScreen> spectrum loc", self.spectrum
-
-
-    def draw(self, basis):
-        self.volumeSource.draw(basis)
-        self.spectrum.draw(basis)
-
-class ScreenTitle:
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.menu  = MenuFrame( platform)
-
-    def draw(self, basis, text):
-        self.menu.draw(basis, text)
-
-class WelcomeScreen:
-    text = "      Welcome to \nmVista pre-Amplifier"
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.welcome  = TextFrame( platform, WelcomeScreen.text, 20 )
-
-    def draw(self, basis):
-        self.welcome.draw(basis)
-
-class ShutdownScreen:
-    text = "Loved the music"
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.platform = platform
-        self.shutdown  = TextFrame( platform, ShutdownScreen.text, 30 )
-
-    def draw(self, basis):
-        self.platform.mute()
-        self.shutdown.draw(basis)
-
-class ScreenSaver:
-    def __init__(self, platform):
-        """ go blank after a while if everything is quiet """
-        # print("ScreenSaver: ")
-        self.platform = platform
-        self.screensave  = TextFrame( platform, '', 30 )
-
-    def draw(self, basis):
-        self.screensave.draw(basis)
-        self.platform.readVolume()   #see if anything has happened
-
-
-class DACScreen:
-    def __init__(self, platform):
-        """ create the screen frames """
-        self.dacScreen  = TextFrame( platform, 'int/ext DAC select', 20 )
-        """ position them """
-
-    def draw(self, basis):
-        self.dacScreen.draw(basis)
-
-class VolChangeScreen:
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.volume      = VolumeSourceFrame( platform )
-        self.volumeA     = VolumeAmountFrame( platform )
-        """ position them """
-        self.volume.alignFrameRight()
-        self.volumeA.alignLeftOf( self.volume )
-
-    def draw(self, basis):
-        self.volume.draw(basis)
-        self.volumeA.draw(basis)
-
-class SourceVolScreen:   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.volume      = VolumeSourceFrame( platform )
-        self.sourceIcon  = SourceIconFrame( platform )
-
-        """ position them """
-        self.volume.alignFrameRight()
-        self.sourceIcon.setMaxFrameWidthLeftTo( self.volume )
-        self.sourceIcon.alignLeft()
-
-    def draw(self, basis):
-        self.volume.draw(basis)
-        self.sourceIcon.draw(basis)
-
-class SourceVUVolScreen:   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.volume      = VolumeSourceFrame( platform )
-        self.sourceIcon  = SourceIconFrame( platform )
-        self.vu          = VolumeUnitsFrame( platform )
-
-        """ position them """
-        self.volume.alignFrameRight()
-        # print "SourceVUVolScreen> align volume to right - vol", self.volume
-
-        self.vu.alignLeftOf( self.volume )
-        self.vu.alignLeft()
-        # print "SourceVUVolScreen> align vu to left of volume - vu", self.vu
-
-        self.sourceIcon.setMaxFrameWidthLeftTo( self.vu )
-        self.sourceIcon.alignLeft()
-        # print "SourceVUVolScreen> align vu to left of volume - sourceIcon", self.sourceIcon
-
-    def draw(self, basis):
-        self.volume.draw(basis)
-        self.sourceIcon.draw(basis)
-        self.vu.draw(basis)
-
-class FullSpectrumScreen:   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
-        """ create the screen objects """
-        self.spectrum    = SpectrumFrame( platform, interval=6)
-        """ position  """
-
-    def draw(self, basis):
-        self.spectrum.draw(basis)
-
-def main():
     """
         This is where execution starts..
             configure the HW & Display objects
             set up the event handling which controls the display Mode(ie which screen)
             run the Display in an infinite loop
     """
-    print "main > startup"
-    p   = Platform()
-    t   = time.time()
-    l   = 0
-    poweredup = True
-    print "main> Platform HW configured at ", time.gmtime(t)
+    def run():
 
-    """ loop around updating the screen and responding to events """
-    # try:
-    while(poweredup):
+        print ("Controller.run> preDAC startup configured at ", time.gmtime(t))
 
-        with p.regulator:
-            with canvas(p.device) as basis:
-                screen = p.checkScreen(basis)
-                p.checkRemoteKeyPress()
-                screen.draw(basis)
-                time.sleep(Platform.loopdelay)
-                # poweredup = p.is_poweredup()
+        """ loop around updating the screen and responding to events """
+        while(True):
+            self.platform.captureAudio()      # should become event driven
+            screen = logic.checkScreen(basis) # this is a consequence of an event
+            self.checkRemoteKeyPress()        # should become event driven
+            self.int_display.draw(screen)     # this will just be the diagnostics in time
+            self.front_display.draw(screen)
+            time.sleep(Platform.loopdelay)
 
-    print "finished"
+        print("Controller.run> terminated")
 
 def cb( e):
     print "Timer> test callback with event ", e
 
 if __name__ == "__main__":
-    main()
-    # while (1):
-    #     try:
-    #         main()
-    #
-    #
-    #     # except KeyboardInterrupt:
-    #     except :
-    #         print "Restarting..."
+    try:
+        logic = Controller()
+        logic.run()
+
+    except KeyboardInterrupt:
+    # except :
+    #     print "Restarting..."

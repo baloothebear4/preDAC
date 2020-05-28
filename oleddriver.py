@@ -76,11 +76,12 @@ class OLEDdriver(canvas):
         # time.sleep(3)
 
     def draw(self, screen):
-        self.calcDisplaytime(True)
-        with self.regulator:
-            with canvas(self.device) as c:
-                screen(c)
-        self.calcDisplaytime(False)
+        if self.device is not None:
+            self.calcDisplaytime(True)
+            with self.regulator:
+                with canvas(self.device) as c:
+                    screen.draw(c)
+            self.calcDisplaytime(False)
 
     def textsize(self, text, font):
         with canvas(self.device) as c:
@@ -172,13 +173,13 @@ class OLEDdriver(canvas):
 
     def trabcd(self, coords):
         new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        print("trabcd from %s to %s" % (coords, new))
+        # print("trabcd from %s to %s" % (coords, new))
         return new
         # translate coordinates to screen coordinates
 
     def trxy(self, coords):
         return (coords[0], self.device.height-coords[1]-1)
-        print("trabcd from %s to %s" % (coords, (coords[0], self.device.height-coords[1]-1)))
+        # print("trabcd from %s to %s" % (coords, (coords[0], self.device.height-coords[1]-1)))
         # translate coordinates to screen coordinates
 
 
@@ -240,16 +241,6 @@ class frontOLED(OLEDdriver):
         # #
         self.testdevice()
         print("frontOLED.__init__> initialised")
-
-    # def trabcd(self, coords):
-    #     new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-    #     # print("trabcd from %s to %s" % (coords, new))
-    #     return new
-    #     # translate coordinates to screen coordinates
-    #
-    # def trxy(self, coords):
-    #     return (coords[0], self.device.height-coords[1]-1)
-    #     # translate coordinates to screen coordinates
 
 
 if __name__ == "__main__":

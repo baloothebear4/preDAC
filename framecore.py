@@ -30,7 +30,7 @@ class Geometry():
         # self._abcd   = bounds.copy()
         self._bounds   = bounds
         self._boundswh = self.size(bounds)
-        print("Geometry.init> abcd %s, bounds %s, boundswh %s, size %s, coords %s" % ( self.abcd, self._bounds, self._boundswh, self.wh, self.coords))
+        # print("Geometry.init> abcd %s, bounds %s, boundswh %s, size %s, coords %s" % ( self.abcd, self._bounds, self._boundswh, self.wh, self.coords))
 
 
     """ test if this will return a from the syntax Frame.a """
@@ -137,7 +137,7 @@ class Geometry():
         self.b = 0 #self._bounds[1]
         self.c = wh[0] #+ self._bounds[0]
         self.d = wh[1] #+ self._bounds[1]
-        print("resize by ", wh, "to", self, self.abcd)
+        # print("resize by ", wh, "to", self, self.abcd)
 
 
     """ calculating the size will need to be more dynamic if the drawing could exceed the bounds """
@@ -150,7 +150,7 @@ class Geometry():
         leave the bottom, left as is and change the top, right accordingly
     """
     def scale(self, scalers):
-        print("scale by", scalers," using ", self._boundswh,", to, ",[ int(self._boundswh[0] * scalers[0])-1, int(scalers[1] * self._boundswh[1])-1 ] )
+        # print("scale by", scalers," using ", self._boundswh,", to, ",[ int(self._boundswh[0] * scalers[0])-1, int(scalers[1] * self._boundswh[1])-1 ] )
         self.resize( [ int(self._boundswh[0] * scalers[0])-1, int(scalers[1] * self._boundswh[1])-1 ] )
 
     """ move the frame relative to the top/right or bottom/left corners """
@@ -237,7 +237,7 @@ class Frame(Geometry):
         self.display    = display
         self.V          = Valign
         self.H          = Halign
-        print("Frame.__init__> ", self)
+        # print("Frame.__init__> ", self)
         self.scale(scalers)
         self.align()
 
@@ -250,7 +250,7 @@ class Frame(Geometry):
         # parse V and H alignment anchors
         # check that the frame is still in bounds
         # this is where the frame coordiantes are setup
-        print("align: top %d, right %d, abcd %s, wh %s" % (self.top, self.right, self.abcd, self.wh))
+        # print("align: top %d, right %d, abcd %s, wh %s" % (self.top, self.right, self.abcd, self.wh))
         if self.V   == 'top':
             self.move_cd( (self.c, self.top) )
             # move so that self.d = self.bounds.d
@@ -295,9 +295,9 @@ class Frame(Geometry):
     """ goes through the frames to see if they overlap  """
     """ test if the frame overlaps the one given        """
     def overlaps(self, f):
-        print("Frame.overlap> SRC algorithm")
+        # print("Frame.overlap> SRC algorithm")
         if   self.c >= f.a and f.c>= self.a and self.d >= f.b and f.d >= self.b:
-            print('Frame.overlap> detected')
+            # print('Frame.overlap> detected')
             return True
         else:
             return False
@@ -333,7 +333,7 @@ class Frame(Geometry):
     #         return False
 
     def check(self):
-        print("%s Frame overlap check for...>" % type(self).__name__)
+        # print("%s Frame overlap check for...>" % type(self).__name__)
         ok = True
         for index, f1 in enumerate(self.frames):
             if f1 == self: continue

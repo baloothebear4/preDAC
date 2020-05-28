@@ -48,7 +48,8 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
     address         = 0x20
     PHONESDETECTPIN = 12
 
-    def __init__(self):
+    def __init__(self, events):
+        self.events = events
         self.State  = {  'active'       : AudioBoard.DEFAULT_SOURCE,
                          'phonesdetect' : AudioBoard.OFF,
                          'mute'         : AudioBoard.OFF,
@@ -260,13 +261,13 @@ class VolumeBoard(PCF8574):
     # RELAYMAP     = ( 7, 1, 2, 3, 6, 5, 4)
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
 
-    def __init__(self):
+    def __init__(self, events):
         self.i2c2         = PCF8574(VolumeBoard.i2c2_port, VolumeBoard.i2c2_address)
         self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_B, VolumeBoard.BUTTON, self.volKnobEvent )
         self.demandVolume = VolumeBoard.DEFAULT_VOL
         self.Volume       = VolumeBoard.DEFAULT_VOL
         self.premuteVolume= VolumeBoard.DEFAULT_VOL
-        self.ev           = "none"
+        self.events       = events
 
         """ run through the channels and set up the relays"""
         for i in range(len(self.i2c2.port)):

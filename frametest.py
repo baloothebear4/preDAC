@@ -116,7 +116,7 @@ def frametest(display):
     a = testScreen1(p, d)
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    d.draw(a.draw)
+    d.draw(a)
 
     print( "Drawn: %s" % ( a) )
     # time.sleep(3)
@@ -125,13 +125,13 @@ def frametest(display):
     #
     # a = testScreen(p, d)
     # print( "testScreen initialised: ", a, p )
-    # p.internaldisplay.draw(a.draw)
+    # p.internaldisplay.draw(a)
     # time.sleep(3)
     #
     # a = testVUScreen(p, d, 0.6)
     # print( "VUScreen initialised: ", a, p )
     # for i in range(5):
-    #     d.draw(a.draw)
+    #     d.draw(a)
     #
     #     print( "testScreen draw executed>", i)
     #     time.sleep(1)
@@ -153,18 +153,20 @@ def screentest(display):
             for s in scale:
                 a = screen(d.boundary, p, d, s, h)
                 print( "%s initialised: %s" % (type(screen).__name__, a) )
-                d.draw(a.draw)
+                d.draw(a)
                 print( "%s drawn: %s" % (type(screen).__name__, a) )
                 time.sleep(1)
 
-    screens = (testScreen1, testScreen2, testScreen3, testScreen4, testScreen5)
+    # screens = (testScreen1, testScreen2, testScreen3, testScreen4, testScreen5)
+    screens = ( ScreenTitle, MainScreen, SpectrumScreen, FullSpectrumScreen, WelcomeScreen, ShutdownScreen, ScreenSaver, VolChangeScreen, SourceVolScreen, VUScreen, VUVScreen)
     for screen in screens:
         a = screen(p, d)
         print( "%s initialised: %s" % (type(screen).__name__, a) )
-        d.draw(a.draw)
+        d.draw(a)
 
         print( "%s drawn: %s" % (type(screen).__name__, a) )
         time.sleep(3)
+
 
 
 """
