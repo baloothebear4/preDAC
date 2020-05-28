@@ -55,12 +55,13 @@ class VolumeAmountFrame(Frame):
         Displays a triangle filled proportional to the Volume level
     """
     def __init__(self, bounds, platform, display, scale):
-        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(scale,0.5), Valign='middle', Halign='centre')
+        Frame.__init__(self, display=display, platform=platform, bounds=bounds, scalers=(scale,0.5), Valign='middle', Halign='left')
 
-    def draw(self, device):
-        self.display.drawFrameTriange( device, self, 1.0, fill="black" )
+    def draw(self, basis):
+
+        self.display.drawFrameTriange( basis, self, 1.0, fill="black" )
         vol = self.platform.volume
-        self.display.drawFrameTriange( device, self, vol, fill="white" )
+        self.display.drawFrameTriange( basis, self, vol, fill="white" )
 
 class TextFrame(Frame):
     """
@@ -100,9 +101,9 @@ class dbVolumeTextFrame(TextFrame):
     def draw(self, basis):
         self.display.drawFrameCentredText(basis, self, "%3.1fdB" % self.platform.volume_db, self.font)
 
-class MenuFrame(Frame):
+class MenuFrame(TextFrame):
     def draw(self, basis):
-        text = self.platform.screenname
+        text = self.platform.screenName
         self.display.drawFrameCentredText(basis, self, text, self.font)
 
 class SourceIconFrame(Frame):
@@ -268,7 +269,7 @@ class SpectrumFrame(Frame):
 
     def draw(self, basis):
         x = 0
-        freq_power = self.platform.packFFT(self.bar_freqs, channel)
+        freq_power = self.platform.packFFT(self.bar_freqs, self.channel)
         for i in range(0, self.bars):
             self.display.drawFrameBar(basis, self, x, freq_power[i], self.barw, "white" )
             x += SpectrumFrame.BARGAP+self.barw
@@ -306,7 +307,7 @@ class Spectrum2chFrame(Frame):
 """ Screen classes - these are top level frames comprising frames of frames at full display size """
 class MainScreen(Frame):
     """ Vol/source in centre - spectrum left and right """
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += SpectrumFrame(self.coords, platform, display, 'left', 0.3 )
         self += dbVolumeSourceFrame(display.boundary, platform, display, 0.4, 'centre')
@@ -317,7 +318,7 @@ class SpectrumScreen(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += VolumeSourceFrame(display.boundary, platform, display, 0.3, 'right')
-        self += SpectrumFrame(display.boundary, platform, display, 0.7, 'left')
+        self += SpectrumFrame(display.boundary, platform, display, 'left', 0.7)
         self.check()
 
 class FullSpectrumScreen(Frame):
@@ -328,15 +329,15 @@ class FullSpectrumScreen(Frame):
         self.check()
 
 class ScreenTitle(Frame):
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
-        self += MenuFrame(display.boundary, platform, display, 1.0, 'centre')
+        self += MenuFrame(display.boundary, platform, display, 'top', 1.0, 'very very long screen title')
         self.check()
 
 class WelcomeScreen(Frame):
     """ Startup screen """
     text = "      Welcome to \nmVista pre-Amplifier"
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += TextFrame( display.boundary, platform, display, 'top', 1.0, WelcomeScreen.text)
 
@@ -344,39 +345,39 @@ class ShutdownScreen(Frame):
     """ Startup screen """
     text = "Loved the music"
 
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += TextFrame( display.boundary, platform, display, 'top', 1.0, ShutdownScreen.text)
 
 class ScreenSaver(Frame):
     """ force the screen to go blank """
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += TextFrame( display.boundary, platform, display, 'top', 1.0, '')
 
 class VolChangeScreen(Frame):
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += VolumeAmountFrame(display.boundary, platform, display, 0.6)
         self += VolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
         self.check()
 
 class SourceVolScreen(Frame):   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += dbVolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
         self += SourceIconFrame(display.boundary, platform, display, 0.6, 'left')
         self.check()
 
 class VUScreen(Frame):   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += VolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
         self += VU2chFrame(display.boundary, platform, display, 0.6, 'left')
         self.check()
 
 class VUVScreen(Frame):   # comprises volume on the left, spectrum on the right
-    def __init__(self, platform):
+    def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += dbVolumeSourceFrame(display.boundary, platform, display, 0.5, 'right')
         self += VUV2chFrame(display.boundary, platform, display, 0.5, 'left')

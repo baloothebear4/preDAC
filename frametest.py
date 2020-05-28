@@ -143,9 +143,16 @@ def screentest(display):
         d = p.internaldisplay
     else:
         d = p.frontdisplay
-    print ("Platform initialised>", p)
+    # print ("Platform initialised>", p)
+    # time.sleep(1)
 
-    screens = (SourceIconFrame, VolumeSourceFrame, dbVolumeSourceFrame, VU2chFrame, VUV2chFrame)
+    # a = VolumeAmountFrame(d.boundary, p, d, 0.5)
+    # d.draw(a)
+    # time.sleep(10)
+    # return
+
+    # screens = (SourceIconFrame, VolumeSourceFrame, dbVolumeSourceFrame, VU2chFrame, VUV2chFrame)
+    screens = ()
     horz    = ('left', 'centre', 'right')
     scale   = (0.3, 0.5)
     for screen in screens:
@@ -160,11 +167,12 @@ def screentest(display):
     # screens = (testScreen1, testScreen2, testScreen3, testScreen4, testScreen5)
     screens = ( ScreenTitle, MainScreen, SpectrumScreen, FullSpectrumScreen, WelcomeScreen, ShutdownScreen, ScreenSaver, VolChangeScreen, SourceVolScreen, VUScreen, VUVScreen)
     for screen in screens:
+        print( "%s initialising" % (screen.__name__) )
         a = screen(p, d)
-        print( "%s initialised: %s" % (type(screen).__name__, a) )
+
         d.draw(a)
 
-        print( "%s drawn: %s" % (type(screen).__name__, a) )
+        print( "%s drawn: %s" % (screen.__name__, a) )
         time.sleep(3)
 
 
@@ -263,6 +271,6 @@ if __name__ == "__main__":
     try:
         geometrytest()
         # frametest('int')
-        screentest('front')
+        screentest('int')
     except KeyboardInterrupt:
         pass

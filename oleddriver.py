@@ -146,8 +146,10 @@ class OLEDdriver(canvas):
         # pc is a percentage of the maximum height
         slope = geo.h/geo.w
         xy  = self.trxy( (geo.x0, geo.y0) )
-        xy1 = self.trxy( (geo.x0+geo.w*pc, geo.y1*slope*pc) )
+        xy1 = self.trxy( (geo.x0+geo.w*pc, geo.y0+geo.w*slope*pc) )
         xy2 = self.trxy( (geo.x0+geo.w*pc, geo.y0) )
+        # print("triangle at ", ( xy, xy1, xy2 ), slope, pc)
+        # print("Frame", geo.norm(), geo.abcd, geo.wh)
         basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline="white" )
 
     def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
@@ -178,8 +180,8 @@ class OLEDdriver(canvas):
         # translate coordinates to screen coordinates
 
     def trxy(self, coords):
+        # print("trxy from %s to %s" % (coords, (coords[0], self.device.height-coords[1]-1)))
         return (coords[0], self.device.height-coords[1]-1)
-        # print("trabcd from %s to %s" % (coords, (coords[0], self.device.height-coords[1]-1)))
         # translate coordinates to screen coordinates
 
 

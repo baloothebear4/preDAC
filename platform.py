@@ -120,6 +120,7 @@ class Platform(Volume, Source, ProcessAudio, AudioBoard):
         Volume.__init__(self)
         Source.__init__(self, self.sourceLogic, self.setSource)
         ProcessAudio.__init__(self)
+        self.captureAudio()
 
         # test data
         # testdataL      = [0.5]*50

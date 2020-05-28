@@ -38,10 +38,11 @@ DCOFFSETSAMPLES = 200
 
 class AudioData():
     def __init__(self):
-        data          = [0.5]*25
+        data          = [0.5]*50
         self.vu       = {'left': 0.5, 'right':0.6}
         self.peak     = {'left': 0.8, 'right':0.9}
-        self.spectrum = {'left': data, 'right': data}
+        self.spectrum = {'left': data, 'right':data}
+        self.samples  = {'left': data, 'right':data}
 
     def filter(self, signal, fc):
         return signal
@@ -80,6 +81,7 @@ class ProcessAudio(AudioData):
         self.minC       = maxValue
         self.dc         = []
         self.readtime   = []
+
 
         self.window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
         # self.window     = np.blackman(FRAMESIZE)
@@ -126,9 +128,9 @@ class ProcessAudio(AudioData):
 
         self.calcReadtime(False)
 
-    def process(self, intervals):
-        self.vu['left'], self.peak['left']  = self.VU(dataL)
-        self.vu['left'], self.peak['right'] = self.VU(dataR)
+    def process(self):
+        self.vu['left'], self.peak['left']  = self.VU(self.samples['left'])
+        self.vu['left'], self.peak['right'] = self.VU(self.samples['right'])
         # other functions to calculate DC offset, noise level, silence, RMS quiet etc can go here
 
     def createBands(self, spacing, fcentre=FIRSTCENTREFREQ):
