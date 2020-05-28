@@ -26,10 +26,12 @@ from platform   import Platform         # used for Test purposes
 
 class Geometry():
     def __init__(self, bounds=[0,0,0,0]):
-        self._abcd   = [0,0]
-        self._abcd   = bounds.copy()
-        self._bounds = bounds
-        print("Geometry.init>", self.abcd)
+        self._abcd   = [0,0,0,0]
+        # self._abcd   = bounds.copy()
+        self._bounds   = bounds
+        self._boundswh = self.size(bounds)
+        print("Geometry.init> abcd %s, bounds %s, boundswh %s, size %s, coords %s" % ( self.abcd, self._bounds, self._boundswh, self.wh, self.coords))
+
 
     """ test if this will return a from the syntax Frame.a """
     @property
@@ -38,10 +40,10 @@ class Geometry():
 
     @a.setter
     def a(self, val):
-        if val >= self._bounds[0] and val <= self._bounds[2]:
+        if val >= 0 and val <= self._boundswh[0]:
             self._abcd[0] = int(val)
         else:
-            raise ValueError('Coords.a > value exceed bounds ', val)
+            raise ValueError('Coords.a > value exceed bounds ', val, self._boundswh, self._abcd)
 
     @property
     def b(self):
@@ -49,10 +51,10 @@ class Geometry():
 
     @b.setter
     def b(self, val):
-        if val >= self._bounds[1] and val <= self._bounds[3]:
+        if val >= 0 and val <= self._boundswh[1]:
             self._abcd[1] = int(val)
         else:
-            raise ValueError('Coords.b > value exceed bounds ', val)
+            raise ValueError('Coords.b > value exceed bounds ', val, self._boundswh, self._abcd)
 
     @property
     def c(self):
@@ -60,10 +62,10 @@ class Geometry():
 
     @c.setter
     def c(self, val):
-        if val >= self._bounds[0] and val <= self._bounds[2]:
+        if val >= 0 and val <= self._boundswh[0]:
             self._abcd[2] = int(val)
         else:
-            raise ValueError('Coords.c > value exceed bounds ', val)
+            raise ValueError('Coords.c > value exceed bounds ', val, self._boundswh, self._abcd)
 
     @property
     def d(self):
@@ -71,10 +73,10 @@ class Geometry():
 
     @d.setter
     def d(self, val):
-        if val >= self._bounds[1] and val <= self._bounds[3]:
+        if val >= 0 and val <= self._boundswh[1]:
             self._abcd[3] = int(val)
         else:
-            raise ValueError('Coords.d > value exceed bounds ', val)
+            raise ValueError('Coords.d > value exceed bounds ', val, self._boundswh, self._abcd)
 
     @property
     def w(self):
@@ -104,13 +106,38 @@ class Geometry():
     def centre(self):
         return self.normxy( ( (self.c+self.a)/2, (self.d+self.b)/2) )
 
-    def resize(self, wh):
+    @property
+    def top(self):
+        return self._boundswh[1]-1
 
-        self.a = self._bounds[0]
-        self.b = self._bounds[1]
-        self.c = wh[0]
-        self.d = wh[1]
-        print("resize by ", wh, "to", self)
+    @property
+    def right(self):
+        return self._boundswh[0]-1
+
+    @property
+    def x0(self):
+        return self.norm()[0]
+
+    @property
+    def y0(self):
+        return self.norm()[1]
+
+    @property
+    def x1(self):
+        return self.norm()[2]
+
+    @property
+    def y1(self):
+        return self.norm()[3]
+
+
+
+    def resize(self, wh):
+        self.a = 0 #self._bounds[0]
+        self.b = 0 #self._bounds[1]
+        self.c = wh[0] #+ self._bounds[0]
+        self.d = wh[1] #+ self._bounds[1]
+        print("resize by ", wh, "to", self, self.abcd)
 
 
     """ calculating the size will need to be more dynamic if the drawing could exceed the bounds """
@@ -123,8 +150,8 @@ class Geometry():
         leave the bottom, left as is and change the top, right accordingly
     """
     def scale(self, scalers):
-        print("scale by", scalers," from ", (self._bounds[2], self._bounds[3]),", to, ",[ int(self._bounds[2] * scalers[0]), int(scalers[1] * self._bounds[3]) ] )
-        self.resize( [ int(self._bounds[2] * scalers[0]), int(scalers[1] * self._bounds[3]) ] )
+        print("scale by", scalers," using ", self._boundswh,", to, ",[ int(self._boundswh[0] * scalers[0])-1, int(scalers[1] * self._boundswh[1])-1 ] )
+        self.resize( [ int(self._boundswh[0] * scalers[0])-1, int(scalers[1] * self._boundswh[1])-1 ] )
 
     """ move the frame relative to the top/right or bottom/left corners """
     def move_ab(self, xy):
@@ -146,14 +173,14 @@ class Geometry():
     def move_middle(self, y):
         #y coordinate
         h = self.h-1
-        self.b = y-h/2
-        self.d = y+h/2
+        self.b = int(y-h/2)
+        self.d = int(y+h/2)
 
     def move_centre(self, x):
         #x coordinate
         w = self.w-1
-        self.a = x-w/2
-        self.c = x+w/2
+        self.a = int(x-w/2) #+ self._bounds[0]
+        self.c = int(x+w/2) #+ self._bounds[0]
 
 
     """
@@ -163,7 +190,8 @@ class Geometry():
         this is to give an absolute coordinate for drawing
     """
     def norm(self):
-        return [self._bounds[0]+self.a, self._bounds[1]+self.b, self._bounds[0]+self.c, self._bounds[0]+self.d]
+        # return self._abcd
+        return [self._bounds[0]+self.a, self._bounds[1]+self.b, self._bounds[0]+self.c, self._bounds[1]+self.d]
 
     def normxy(self, xy):
         return (self._bounds[0]+xy[0], self._bounds[1]+xy[1])
@@ -180,7 +208,7 @@ class Geometry():
            return True
 
     def __str__(self):
-        return( "abcd %s, bounds %s, size %s" % (self.abcd, self._bounds, self.wh))
+        return( "name %s, abcd %s, bounds %s, boundswh %s, size %s, coords %s" % (type(self).__name__, self.abcd, self._bounds, self._boundswh, self.wh, self.coords))
 
 
 
@@ -204,7 +232,7 @@ class Frame(Geometry):
         """
         Geometry.__init__(self, bounds)
         self.platform   = platform    #only needed by the top Frame or Screen, as is passed on draw()
-        self.bounds     = Geometry(bounds)
+        # self.bounds     = Geometry(bounds)
         self.frames     = []         #Holds the stack of containing frames
         self.display    = display
         self.V          = Valign
@@ -222,26 +250,27 @@ class Frame(Geometry):
         # parse V and H alignment anchors
         # check that the frame is still in bounds
         # this is where the frame coordiantes are setup
+        print("align: top %d, right %d, abcd %s, wh %s" % (self.top, self.right, self.abcd, self.wh))
         if self.V   == 'top':
-            self.move_cd( (self.c, self.bounds.d) )
+            self.move_cd( (self.c, self.top) )
             # move so that self.d = self.bounds.d
         elif self.V == 'middle':
-            self.move_middle( int(self.bounds.d/2) )
+            self.move_middle( int(self.top/2) )
             # move so that middle(self) = middle(self.bounds) : middle =
         elif self.V == 'bottom':
-            self.move_ab( (self.a, self.bounds.b) )
+            self.move_ab( (self.a, 0) )
             # move so that self.b = self.bounds.b
         else:
             raise ValueError('Frame.align: unknown vertical anchor (top, middle, bottom)->', self.V)
 
         if self.H   == 'left':
-            self.move_ab( (self.bounds.a, self.b) )
+            self.move_ab( (0, self.b) )
             # move so that self.a = self.bounds.a
         elif self.H == 'centre':
-            self.move_centre( int(self.bounds.c/2))
+            self.move_centre( int(self.right/2))
             # move so that centre(self) = centre(self.bounds)
         elif self.H == 'right':
-            self.move_cd( (self.bounds.c, self.d) )
+            self.move_cd( (self.right, self.d) )
             # move so that self.c = self.bounds.c
         else:
             raise ValueError('Frame.align: unknown horz anchor (left, centre, right)->', self.H)

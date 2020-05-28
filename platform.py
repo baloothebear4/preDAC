@@ -127,16 +127,18 @@ class Platform(Volume, Source, ProcessAudio, AudioBoard):
         self.vu       = {'left': 0.6, 'right':0.6}
         self.peak     = {'left': 0.8, 'right':0.9}
         self.spectrum = {'left': testdataL, 'right': testdataR}
-        
+
         try:
             self.internaldisplay   = internalOLED()
         except:
+            self.internaldisplay   = None
             print("Platform.__init__> failed to start internal display")
 
         try:
             self.frontdisplay      = frontOLED()
         except:
-                print("Platform.__init__> failed to start front display")
+            self.frontdisplay = None
+            print("Platform.__init__> failed to start front display")
 
     def __str__(self):
         text = ">"

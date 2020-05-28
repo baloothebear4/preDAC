@@ -14,6 +14,7 @@
 
 from oleddriver import make_font, scaleImage
 from framecore import Frame, Geometry
+import os
 
 class depVolumeSourceFrame(Frame):
     """
@@ -115,11 +116,9 @@ class VolumeSourceFrame(Frame):
         - has a width determined by the scale
     """
     def __init__(self, bounds, platform, display, scale, Halign='right'):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )
-        Frame.__init__(self, display.boundary, platform, display, (0.5,1.0), 'bottom', Halign)
-        # self += TextFrame(self.coords, platform, display, "top", "22")        # this are the widest number
-        # self += SourceTextFrame(self.coords, platform, display, 'bottom', "streamer") # this are the widest source text
+        Frame.__init__(self, display.boundary, platform, display, (scale,1.0), 'middle', Halign)
+        self += VolumeTextFrame(self.coords, platform, display, "top", 0.7, "22")        # this are the widest number
+        self += SourceTextFrame(self.coords, platform, display, 'bottom', 0.3, "streamer") # this are the widest source text
         self += OutlineFrame(self.coords, platform, display)
         self.check()
 
@@ -127,17 +126,15 @@ class VolumeSourceFrame(Frame):
     def width(self):
         return
 
-class dBVolumeSourceFrame(Frame):
+class dbVolumeSourceFrame(Frame):
     """
         Displays the volume as a percentage with the source underneath
         - has a width determined by the scale
     """
     def __init__(self, bounds, platform, display, scale, Halign='right'):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )
-        Frame.__init__(self, display.boundary, platform, display, Halign=Halign)
-        self += dbVolumeTextFrame(self.coords, platform, display, V='top', text='-64.0dB')        # this are the widest number
-        self += SourceTextFrame(self.coords, platform, display, V='bottom', text='streamer') # this are the widest source text
+        Frame.__init__(self, display.boundary, platform, display, scalers=(scale, 1.0), Halign=Halign)
+        self += dbVolumeTextFrame(self.coords, platform, display, V='top', Y=0.7, text='-64.0dB')        # this are the widest number
+        self += SourceTextFrame(self.coords, platform, display, V='bottom', Y=0.3, text='streamer') # this are the widest source text
         self += OutlineFrame(self.coords, platform, display)
         self.check()
 
@@ -150,22 +147,30 @@ class VolumeAmountFrame(Frame):
         Displays a triangle filled proportional to the Volume level
     """
     def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(0.5,0.5), Valign='middle', Halign='right')
+        Frame.__init__(self, platform=platform, bounds=bounds, scalers=(0.5,0.5), Valign='middle', Halign='centre')
 
     def draw(self, device):
         self.display.drawFrameTriange( device, self, 1.0, fill="black" )
-        vol = self.platform.volume_percent
+        vol = self.platform.volume
         self.display.drawFrameTriange( device, self, vol, fill="white" )
 
 class TextFrame(Frame):
     """
         Display a simple centred set of text
+        - text is the largest imaginable width of text
+        - V is the vertical alignment
+        - Y is the y scaler
     """
-    def __init__(self, bounds, platform, display, V, text=''):
-        Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(1.0,0.5), Valign=V, Halign='centre')
-        self.font   = make_font("arial.ttf", self.h)
+    def __init__(self, bounds, platform, display, V, Y, text=''):
+        Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(1.0,Y), Valign=V, Halign='centre')
+        # scale the font so the widest fits
         self.text   = text
-        self._width, self._height = display.textsize(self.text, self.font)
+        self._width = self.w+1
+        fontsize    = self.h
+        while self._width > self.w or self._height > self.h:
+            self.font   = make_font("arial.ttf", fontsize)
+            self._width, self._height = display.textsize(text, self.font)
+            fontsize -= 1
 
     def draw(self, basis):
         self.display.drawFrameCentredText(basis, self, self.text, self.font)
@@ -176,7 +181,7 @@ class TextFrame(Frame):
 
 class VolumeTextFrame(TextFrame):
     def draw(self, basis):
-        vol = self.platform.volume_percent * 100
+        vol = self.platform.volume * 100
         self.display.drawFrameCentredText(basis, self, "%2d" % vol, self.font)
 
 class SourceTextFrame(TextFrame):
@@ -188,13 +193,6 @@ class dbVolumeTextFrame(TextFrame):
         self.display.drawFrameCentredText(basis, self, "%3.1fdB" % self.platform.volume_db, self.font)
 
 class MenuFrame(Frame):
-    """
-        Display a simple the title of screen, as an overlay
-    """
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.4), Valign='top', Halign='centre')
-        self.font   = make_font("arial.ttf", self.h)
-
     def draw(self, basis):
         text = self.platform.screenname
         self.display.drawFrameCentredText(basis, self, text, self.font)
@@ -203,8 +201,8 @@ class SourceIconFrame(Frame):
     """
         Displays a an Icon for the source type and animates it
     """
-    def __init__(self, bounds, platform, display, scale):  # size is a scaling factor
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(scale,1.0), Valign='bottom', Halign='left')
+    def __init__(self, bounds, platform, display, scale, H):  # size is a scaling factor
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(scale,1.0), Valign='middle', Halign=H)
         self.files          = {}  # dictionary of files to images
         self.icons          = {}  # dictionary of images, sources as keys
 
@@ -283,7 +281,7 @@ class VUVFrame(Frame):
         - uses full screen height
     """
     BARWIDTH     = 0.4  # % of frame width
-    XSCALE       = 0.5  # width of the frame in the parent
+    XSCALE       = 0.7  # width of the frame in the parent
     BARHEIGHT    = 1.0  # % of frame height
     PEAKBARHEIGHT= 1
 
@@ -371,37 +369,28 @@ class SpectrumFrame(Frame):
         return self.bars * (SpectrumFrame.BARGAP+self.barw)
 
 class VU2chFrame(Frame):
-    def __init__(self, bounds, platform, display, scale):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
-        Frame.__init__(self, geo.coords, platform, display)
+    def __init__(self, bounds, platform, display, scale, H):
+        Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
         limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
-        self += VUFrame(geo.coords, platform, display, 'left', limits )
-        self += VUFrame(geo.coords, platform, display, 'right', limits )
-        self += TextFrame(display.boundary, platform, display, 'top', "45")
-        self += OutlineFrame(geo.coords, platform, display)
+        self += VUFrame(self.coords, platform, display, 'left', limits )
+        self += VUFrame(self.coords, platform, display, 'right', limits )
+        # self += OutlineFrame(self.coords, platform, display)
         self.check()
 
 class VUV2chFrame(Frame):
-    def __init__(self, bounds, platform, display, scale):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
-        Frame.__init__(self, geo.coords, platform, display)
+    def __init__(self, bounds, platform, display, scale, H):
+        Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
         limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
-        self += VUVFrame(geo.coords, platform, display, 'left', limits )
-        self += VUVFrame(geo.coords, platform, display, 'right', limits )
-        self += TextFrame(display.boundary, platform, display, 'top',"45")
-        self += OutlineFrame(geo.coords, platform, display)
+        self += VUVFrame(self.coords, platform, display, 'left', limits )
+        self += VUVFrame(self.coords, platform, display, 'right', limits )
+        # self += OutlineFrame(self.coords, platform, display)
         self.check()
 
 class Spectrum2chFrame(Frame):
-    def __init__(self, bounds, platform, display, scale):
-        geo   = Geometry(display.boundary)
-        geo.scale( (scale, 1.0) )   # make the VU Screen scale width
-        Frame.__init__(self, geo.coords, platform, display)
-        self += SpectrumFrame(geo.coords, platform, display, 'left', 0.5 )
-        self += SpectrumFrame(geo.coords, platform, display, 'right', 0.5 )
-        # self += TextFrame(display.boundary, platform, display, "45")
+    def __init__(self, bounds, platform, display, scale, H):
+        Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
+        self += SpectrumFrame(self.coords, platform, display, 'left', 0.5 )
+        self += SpectrumFrame(self.coords, platform, display, 'right', 0.5 )
         self.check()
 
 """ Screen classes - these are top level frames comprising frames of frames at full display size """

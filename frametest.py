@@ -19,19 +19,19 @@ import time
 """
 
 class Frame_1(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0,0.5), Valign='top', Halign='right')
+    def __init__(self, bounds, platform, display, V, H):
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='top', Halign='left')
         self.font   = make_font("arial.ttf", self.h*0.5)
 
 
     def draw(self, basis):
-        # self.display.outline( basis, self, outline="white")
+        self.display.outline( basis, self, outline="white")
         self.display.drawFrameLVCentredtext(basis, self, "Frame 1", self.font)
         print("Frame_1.draw>", self)
 
 class Frame_2(Frame):
-    def __init__(self, bounds, platform, display):
-        Frame.__init__(self,platform=platform, bounds=bounds, display=display, scalers=(1.0,0.5), Valign='bottom', Halign='left')
+    def __init__(self, bounds, platform, display, V, H):
+        Frame.__init__(self,platform=platform, bounds=bounds, display=display, scalers=(0.5,0.5), Valign='bottom', Halign='centre')
         self.font   = make_font("arial.ttf", self.h*0.5)
 
     def draw(self, basis):
@@ -40,24 +40,47 @@ class Frame_2(Frame):
         print("Frame_2.draw>", self)
 
 class testScreen1(Frame):
-    def __init__(self):
-        Screen.__init_()
-        self.screen += Frame_1(V='bottom', H='left')
-        self.screen += Frame_2(V='bottom', H='left')
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display, scalers= (0.5,1.0), Halign="right", Valign="bottom")
+        print("TestScreen>", self)
+        self += Frame_1(self.abcd, platform, display, V='bottom', H='left')
+        self += Frame_2(self.abcd, platform, display, V='bottom', H='left')
         self.check()
 
-class testScreen(Frame):
+class testScreen2(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
-        # self += Frame_1(display.boundary, platform, display)
-        # self += Frame_2(display.boundary, platform, display)
-        # self += VolumeAmountFrame(display.boundary, platform, display)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.3, 'right')
 
-        # self += TextFrame(display.boundary, platform, display, 'middle', "Welcome")
+        self += VUV2chFrame(display.boundary, platform, display, 0.3, 'centre')
+        self += SourceIconFrame(display.boundary, platform, display, 0.4, 'left')
+        self.check()
+
+class testScreen3(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += SpectrumFrame(self.coords, platform, display, 'left', 0.3 )
+        self += dbVolumeSourceFrame(display.boundary, platform, display, 0.4, 'centre')
+        self += SpectrumFrame(self.coords, platform, display, 'right', 0.3 )
+
+        self.check()
+
+class testScreen4(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.3, 'right')
+        self += Spectrum2chFrame(display.boundary, platform, display, 0.7, 'left')
+        self.check()
+
+class testScreen5(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+
+
+        self += TextFrame(display.boundary, platform, display, 'middle', 1.0, "Welcome to \npreDAC preamp")
         # self += MenuFrame(display.boundary, platform, display)
-        # self += SourceIconFrame(display.boundary, platform, display)
-        self += VolumeSourceFrame(display.boundary, platform, display, 0.5, 'right')
-        # self += VU2chFrame(display.boundary, platform, display, 0.5)
+
         self.check()
 
 def frametest(display):
@@ -87,11 +110,11 @@ def frametest(display):
     # a = f(geo.coords, p, d, 1.0 )
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    f = VolumeSourceFrame
-    a = f(geo.coords, p, d, 0.5, 'right' )
+    # f = VolumeSourceFrame
+    # a = f(geo.coords, p, d, 0.2, 'right' )
 
-    a = testScreen(p, d)
-    print( "%s initialised: %s" % (type(f).__name__, a) )
+    a = testScreen1(p, d)
+    # print( "%s initialised: %s" % (type(f).__name__, a) )
 
     d.draw(a.draw)
 
@@ -113,23 +136,36 @@ def frametest(display):
     #     print( "testScreen draw executed>", i)
     #     time.sleep(1)
 
-# def screentest():
-#
-#     screens = ()
-#     p = Platform()
-#     print ("Platform initialised>", p)
-#     if display=='int':
-#         d = p.internaldisplay
-#     else:
-#         d = p.frontdisplay
-#
-#     for i in range(len(screens):
-#         a = testVUScreen(p, d, 0.6)
-#         print( "%s initialised: %s" % (type(i).__name__, a) )
-#         d.draw(a.draw)
-#
-#         print( "%s drawn: %s" % (type(i).__name__, a) )
-#         time.sleep(3)
+def screentest(display):
+
+    p = Platform()
+    if display=='int':
+        d = p.internaldisplay
+    else:
+        d = p.frontdisplay
+    print ("Platform initialised>", p)
+
+    screens = (SourceIconFrame, VolumeSourceFrame, dbVolumeSourceFrame, VU2chFrame, VUV2chFrame)
+    horz    = ('left', 'centre', 'right')
+    scale   = (0.3, 0.5)
+    for screen in screens:
+        for h in horz:
+            for s in scale:
+                a = screen(d.boundary, p, d, s, h)
+                print( "%s initialised: %s" % (type(screen).__name__, a) )
+                d.draw(a.draw)
+                print( "%s drawn: %s" % (type(screen).__name__, a) )
+                time.sleep(1)
+
+    screens = (testScreen1, testScreen2, testScreen3, testScreen4, testScreen5)
+    for screen in screens:
+        a = screen(p, d)
+        print( "%s initialised: %s" % (type(screen).__name__, a) )
+        d.draw(a.draw)
+
+        print( "%s drawn: %s" % (type(screen).__name__, a) )
+        time.sleep(3)
+
 
 """
 Extensive test of geometry scenarios, including overlap tests
@@ -137,7 +173,7 @@ Extensive test of geometry scenarios, including overlap tests
 
 def geometrytest():
 
-    b = [0,0,64,32]
+    b = [64,0,128,32]
     g = Geometry(b)
     print("Geometry initialised>", g)
 
@@ -179,10 +215,11 @@ def geometrytest():
         g.resize([30,100])
         print("Geometry coords changed>", g)
     except Exception as e:
-        print("Geometry exception (illegal resize)",e)
+        print("Geometry exception (illegal resize) - correcgt fail",e)
 
+    g = Geometry([0,0,100,100])
 
-    scale=[0.8, 0.8]
+    scale=[0.5, 0.5]
     print("Scale and Resize by %s >from %s" % (scale, g))
     g.scale(scale )
     print(" to ", g)
@@ -223,6 +260,7 @@ def geometrytest():
 if __name__ == "__main__":
     try:
         geometrytest()
-        frametest('int')
+        # frametest('int')
+        screentest('int')
     except KeyboardInterrupt:
         pass

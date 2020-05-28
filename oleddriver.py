@@ -31,10 +31,8 @@ def make_font(name, size):
 def scaleImage(image_path, geo):
     """  scales an image to fit the frame, with the height or width changing proportionally """
     """  Find out which parameter does not fit the frame """
-    # print float(image.width) / self.fwidth,  float(image.height) /self.fheight
-    image = Image.open(image_path)
-    image = ImageOps.invert(image)
-    # logo = Image.open(img_path).convert("RGBA")
+
+    image = Image.open(image_path).convert("L")  #RGBA
     if   float(image.width) / geo.w > float(image.height) / geo.h:
         wpercent = (geo.w/float(image.width))
         hsize = int((float(image.height)*float(wpercent)))
@@ -100,7 +98,7 @@ class OLEDdriver(canvas):
             size is set to the given height"""
         if wh[0]>geo.w: print("OLEDdriver.drawFrameMiddlerect> rectangle width is too large for frame")
         if wh[1]>geo.h: print("OLEDdriver.drawFrameMiddlerect> rectangle height is too large for frame")
-        coords = (geo.a+xoffset, geo.centre[1]-wh[1]/2, geo.a+xoffset+wh[0], geo.centre[1]+wh[1]/2)
+        coords = (geo.x0+xoffset, geo.centre[1]-wh[1]/2, geo.x0+xoffset+wh[0], geo.centre[1]+wh[1]/2)
         basis.rectangle(self.trabcd(coords), fill=fill)
 
     def drawFrameCentrerect(self, basis, geo, fill, wh, yoffset):
@@ -108,14 +106,14 @@ class OLEDdriver(canvas):
             size is set to the given height"""
         if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
         if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
-        coords = (geo.centre[0]-wh[0]/2, geo.b+yoffset, geo.centre[0]+wh[0]/2, geo.b+wh[1]+yoffset)
+        coords = (geo.centre[0]-wh[0]/2, geo.y0+yoffset, geo.centre[0]+wh[0]/2, geo.y0+wh[1]+yoffset)
         basis.rectangle(self.trabcd(coords), fill=fill)
 
     def drawFrameLVCentredtext(self, basis, geo, text, font):
         w, h = basis.textsize(text=text, font=font)
         if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
         if h > geo.h: print("OLEDdriver.drawFrameCentredText> text to high for frame")
-        xy = (geo.a, geo.centre[1]+h/2)
+        xy = (geo.x0, geo.centre[1]+h/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
     def drawFrameCentredText( self, basis, geo, text, font):
@@ -146,13 +144,13 @@ class OLEDdriver(canvas):
     def drawFrameTriange( self, basis, geo, pc, fill ):
         # pc is a percentage of the maximum height
         slope = geo.h/geo.w
-        xy  = self.trxy( (geo.a, geo.b) )
-        xy1 = self.trxy( (geo.a+geo.w*pc, geo.d*slope*pc) )
-        xy2 = self.trxy( (geo.a+geo.w*pc, geo.b) )
+        xy  = self.trxy( (geo.x0, geo.y0) )
+        xy1 = self.trxy( (geo.x0+geo.w*pc, geo.y1*slope*pc) )
+        xy2 = self.trxy( (geo.x0+geo.w*pc, geo.y0) )
         basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline="white" )
 
     def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
-        coords = (geo.a+x, geo.b, geo.a+x+w, geo.b+geo.d*ypc)
+        coords = (geo.x0+x, geo.y0, geo.x0+x+w, geo.y0+geo.y1*ypc)
         basis.rectangle( self.trabcd(coords), fill=fill)
 
     def draw_status(self, vol, source, mute, gain, headphonedetect):
