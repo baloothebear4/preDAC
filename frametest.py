@@ -261,6 +261,6 @@ if __name__ == "__main__":
     try:
         geometrytest()
         # frametest('int')
-        screentest('int')
+        screentest('front')
     except KeyboardInterrupt:
         pass

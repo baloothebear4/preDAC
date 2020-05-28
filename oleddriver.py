@@ -54,7 +54,7 @@ class OLEDdriver(canvas):
     def __init__(self, device, fps):
         self.device     = device
         self.regulator  = framerate_regulator( fps=fps )
-        self.device.persist = True
+        self.device.persist = False
         self.readtime = []
 
     def calcDisplaytime(self,start=True):
@@ -232,12 +232,12 @@ class frontOLED(OLEDdriver):
 
     def __init__(self):
 
-        # OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
+        OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
         print("***check out the non command line version")
 
-        driver = spi(port=frontOLED.SPIPORT)
-        OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
-        #
+        # driver = spi(port=frontOLED.SPIPORT)
+        # OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
+        # #
         self.testdevice()
         print("frontOLED.__init__> initialised")
 
