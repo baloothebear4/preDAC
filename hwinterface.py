@@ -283,14 +283,14 @@ class VolumeBoard(PCF8574):
         """ ** Need to decide whether the volume write can be done in the interrupt? """
         if a == RotaryEncoder.CLOCKWISE:
             if self.demandVolume < VolumeBoard.MAX_VOLUME: self.demandVolume +=1
-            self.ev = 'Clockwise'
+            self.events.VolTurn('vol_change')
         elif a == RotaryEncoder.ANTICLOCKWISE:
             if self.demandVolume > VolumeBoard.MIN_VOLUME: self.demandVolume -=1
-            self.ev = 'Anti-clockwise'
+            self.events.VolTurn('vol_change')
         elif a == RotaryEncoder.BUTTONUP:
             self.ev = 'Button up'
         elif a == RotaryEncoder.BUTTONDOWN:
-            self.ev = 'Button down'
+            self.events.VolTurn('mute_change')
             if self.Volume == VolumeBoard.MIN_VOLUME:
                 # unmute
                 self.demandVolume = self.premuteVolume
@@ -301,7 +301,7 @@ class VolumeBoard(PCF8574):
 
         # if self.demandVolume == 0: self.demandVolume = 1
         # self.setVolume(self.demandVolume)
-        print("VolumeBoard.volKnobEvent > **check timing for interrupt update**", self.ev, self.demandVolume)
+        print("VolumeBoard.volKnobEvent > **check timing for interrupt update**", a, self.demandVolume)
 
     def detectVolChange(self):
         """ use as part of the main loop to detect and implement volume changes """
@@ -349,7 +349,7 @@ class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #su
     def __init__(self, events):
         VolumeBoard.__init__(self, events)
         ControlBoard.__init__(self, events)
-        AudioBoard.__init__(self)
+        AudioBoard.__init__(self, events)
         RemoteController.__init__(self, events)
 
         """ consider whether group together the data pull requests?
@@ -363,14 +363,14 @@ if __name__ == '__main__':
     from events import Events
     e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
 
-    """ ir controller test code
+    """ ir controller test code """
     irRemote = RemoteController(e)
 
     while True:
         keyname, updown = irRemote.checkRemoteKeyPress()
         if keyname != "no":
             print('%s (%s)' % (keyname, updown))
-    """
+
 
     """ Volume knob test code """
     v = VolumeBoard()

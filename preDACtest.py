@@ -213,13 +213,16 @@ pinA = 26
 pinB = 16
 button = 13
 
+from events import Events
 def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
+    e = Events(( 'Shutdown', 'CtrlPress', 'ScreenSaving','CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
+
 
     global mute, new
-    audio   = AudioBoard()
+    audio   = AudioBoard(e)
     logic   = audio.chLogic()
     chlogic = audio.sourceLogic()
     status  = audio.readAudioBoardState()
@@ -229,8 +232,9 @@ def main():
     # r = RotaryEncoder(pinA, pinB, button, buttonpress)
 
     """ Volume knob test code """
-    v = VolumeBoard()
-    proc = processaudio.ProcessAudio()
+    v = VolumeBoard(e)
+    proc = processaudio.AudioProcessor(e)
+    proc.captureAudio()
 
 
     OLED = OLEDbar()
@@ -290,12 +294,12 @@ def main():
             OLED.draw_status( vol-127,'%d = %s' %(ch, logic[ch]),status['mute'], status['gain'], status['phonesdetect'])
             chchanged = False
 
-        proc.process()
+        proc.captureAudio()
         # proc.printSpectrum()
         # proc._print()
         # print proc.leftCh()
 
-        OLED.draw_screen(proc.rightCh())
+        # OLED.draw_screen(proc.rightCh())
         time.sleep(0.005)
 
 
