@@ -88,7 +88,7 @@ class AudioProcessor(AudioData):
         self.events   = events
         # set up audio input
         self.recorder = pyaudio.PyAudio()
-        self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE)
+
 
         AudioData.__init__(self)
 
@@ -102,9 +102,25 @@ class AudioProcessor(AudioData):
         # self.window     = np.blackman(FRAMESIZE)
         print("AudioProcessor.__init__> ready and reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
 
+    def start_capture(self):
+        self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE, stream_callback=self.callback)
+        self.stream.start_stream()
+
+    def callback(self, in_data, frame_count, time_info, status):
+
+        # print('AudioProcessor.callback> received %d frames, time %s, status %s, data bytes %d' % (frame_count, time_info, status, len(in_data)))
+        self.calcReadtime()
+        data        = np.frombuffer(in_data, dtype=np.int16 )/maxValue
+        self.samples['left']  = data[0::2]
+        self.samples['right'] = data[1::2]
+        self.events.Audio('capture')
+        self.calcReadtime(False)
+        return (in_data, pyaudio.paContinue)
+
     def captureAudio(self):
         '''
         Wait for the frame to be ready, then process the Samples
+         - this is used for blocking calls
         '''
         self.calcReadtime()
         retry   = 0
@@ -230,7 +246,7 @@ class AudioProcessor(AudioData):
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            # print('AudioProcessor:calcReadtime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
+            # print('AudioProcessor:calcReadtime> %3.3fms' % (np.mean(self.readtime)*1000))
 
 
     def calcDCoffset(self, data):
@@ -280,7 +296,7 @@ class AudioProcessor(AudioData):
     def normalise(self, level):
         """ convert from dB into a percentage """
         """ need to calibrate this more carefully """
-        return (35 + level)/110
+        return (30 + level)/130
 
     def printSpectrum(self, octave, intervalUpperF, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*octave) )

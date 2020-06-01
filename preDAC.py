@@ -132,7 +132,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'VUScreen'
+        self.baseScreen     = 'main'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -170,6 +170,8 @@ class Controller:
     def startAction(self):
         self.welcomeTimer.start()
         self.setScreen('start')
+        self.audioready = False
+        self.platform.start_capture()
 
     def checkScreen(self, basis):
         """ return the current screen object to run """
@@ -303,7 +305,8 @@ class Controller:
             self.ScreenSave('cancel_screensave')
 
         elif e == 'capture':
-            print("Controller.AudioAction> capture event not implemented")
+            self.platform.process()
+            self.audioready = True
 
         else:
             print("Controller.AudioAction> unknown event ",e)
@@ -358,27 +361,33 @@ class Controller:
 
         print("Controller.run> preDAC startup configured at ", time.gmtime())
         self.startAction()
-        
+
+        t = time.time()
+
         """ loop around updating the screen and responding to events """
         while(True):
-            self.platform.captureAudio()      # should become event driven
+            # self.platform.captureAudio()      # should become event driven
             """ return the current screen object to run """
             Timer.checkTimers()
             self.platform.checkKeys()
-            # temp taken out
-            # if self.menuMode:
-            #     self.screens['screenTitle'].draw( basis, self.screenList[self.activeScreen]['title'] )
-            screen = self.screens[self.activeScreen]
 
-            # self.checkRemoteKeyPress()        # should become event driven
-            if self.test_mode:
-                self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
+            if self.audioready:
+                screen = self.screens[self.activeScreen]
+
+                # self.checkRemoteKeyPress()        # should become event driven
+                if self.test_mode:
+                    self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
+                else:
+                    self.platform.frontdisplay.draw(screen)
+                    self.platform.internaldisplay.draw_status(self.platform.volume, self.platform.activeSourceText, \
+                           self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+                self.audioready = False
+
+                # print("run> waited for audio: waited", 1000*(time.time()-t))
+                t = time.time()
             else:
-                self.platform.frontdisplay.draw(screen)
-                self.platform.internaldisplay.draw_status(self.platform.volume, self.platform.activeSourceText, \
-                       self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
-
-            time.sleep(Controller.loopdelay)
+                # print("run> waiting for audio: waited", 1000*(time.time()-t)
+                time.sleep(Controller.loopdelay)
 
         print("Controller.run> terminated")
 
