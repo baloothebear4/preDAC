@@ -15,7 +15,7 @@
 from events import Events
 import time
 
-from platform import Platform
+from platform import Platform, ListNext
 from frames import *
 
 # # logging
@@ -101,9 +101,9 @@ class Controller:
 
     def __init__(self, test_mode=False):
         self.test_mode = test_mode
-        
+
         """ Setup the events """
-        self.events          = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Audio', 'RemotePress', 'Pause', 'Start', 'Stop', 'ScreenSaving'))
+        self.events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
 
         """ Setup the HW, Displays and audio processing """
         self.platform = Platform(self.events)
@@ -118,24 +118,21 @@ class Controller:
         self.iconMoveTimer   = Timer(Controller.iconMoveTime, self.MoveIcon, ['iconTimeout'] , 'iconMoveTimer')
         self.menuTimer       = Timer(Controller.menuTime, self.MenuAction, ['endmenu'] , 'menuTimer')
         self.screensaveTimer = Timer(Controller.screensaveTime, self.ScreenSave, ['start_screensave'] , 'screensaveTimer')
-        self.welcomeTimer    = Timer(Controller.welcomeTime, self.Welcomed, ['welcomeTimeout'], 'welcomeTimer' ).start()
+        self.welcomeTimer    = Timer(Controller.welcomeTime, self.Welcomed, ['welcomeTimeout'], 'welcomeTimer' )
         self.shutdownTimer   = Timer(Controller.shutdownTime, self.platform.poweroff, ['shutdownTimeout'], 'shutdownTimer' )
 
         """ Setup the event callbacks """
-        self.events.VolTurn      += self.VolumeChange    # when the volume knob, remote or switch is changed
+        self.events.VolKnob      += self.VolumeChange    # when the volume knob, remote or switch is changed
         self.events.CtrlTurn     += self.SourceChange    # when the control knob, remote or switch is pressed
         self.events.CtrlPress    += self.MenuAction      # when when the control knob is pressed start the menu options
-        self.events.Shutdown     += self.ShutdownAction  # when the system detects a change to be acted on , eg Shutdown
+        self.events.Platform     += self.PlatformAction  # when the system detects a change to be acted on , eg Shutdown
         self.events.RemotePress  += self.RemoteAction    # when the remote controller is pressed
-        self.events.ScreenSaving += self.ScreenSave      # when long silence detected
         self.events.Audio        += self.AudioAction     # respond to a new sample, or audio silence
 
 
 
-
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'main'
-        self.activeScreen   = 'start'
+        self.baseScreen     = 'VUScreen'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -160,16 +157,19 @@ class Controller:
 
         """ Menu functionality """
         self.menuMode = False
-        self.menuSequence = {}
-        pos = 0
-        for i, (name, c) in enumerate(self.screenList.items()):
+        menuSequence = []
+        for name, c in self.screenList.items():
             if c['base'] == 'yes':
-                self.menuSequence.update( {name : pos })
-                pos += 1
-
-        print("Controller.__init__> all OK")
+                menuSequence.append( name )
+        self.screenmenu = ListNext(menuSequence, self.baseScreen)
 
 
+        print("Controller.__init__> all OK", self.screenmenu)
+
+
+    def startAction(self):
+        self.welcomeTimer.start()
+        self.setScreen('start')
 
     def checkScreen(self, basis):
         """ return the current screen object to run """
@@ -185,16 +185,16 @@ class Controller:
         if e == 'vol_change':
             self.volChangeTimer.start()
             self.activeScreen= 'volChange'
-            self.detectVolChange()
+            self.platform.detectVolChange()
 
         elif e =='stopVol':
             self.activeScreen= self.baseScreen
 
         elif e =='mute':
-            self.mute()   #mute the audio board
+            self.platform.mute()   #mute the audio board
 
         elif e =='unmute':
-            self.unmute() #unmute the audio board
+            self.platform.unmute() #unmute the audio board
 
         elif e =='Button up':
             #detected that the mute button has raised - no action
@@ -205,15 +205,15 @@ class Controller:
     def RemoteAction(self, e='volume_up'):
         if e == 'volume_up':
             # print "RemotePress: Calling volume up"
-            self.volumeUp()
+            self.platform.volumeUp()
 
         elif e =='volume_down':
             # print "RemotePress: calling volume down"
-            self.volumeDown()
+            self.platform.volumeDown()
 
         elif e =='mute':
             # print "RemotePress: toggle mute"
-            self.toggleMute()
+            self.platform.toggleMute()
 
         else:
             print("Controller.RemotePress> unknown event", e)
@@ -222,7 +222,7 @@ class Controller:
         if self.activeScreen== 'sourceVol' or self.activeScreen== 'sourceVUVol':
             # print "MoveIcon>", e, self.activeScreen
             if  e == 'iconTimeout':
-                self.nextIcon()
+                self.platform.nextIcon()
                 self.iconMoveTimer.start()
             elif e == 'startIcons':
                 self.iconMoveTimer.start()
@@ -235,16 +235,16 @@ class Controller:
             self.MoveIcon('startIcons')  # get the icons moving is not already
             self.srcChangeTimer.start()
             self.events.CtrlPress -= self.MenuAction
-            self.mute()
-            self.nextSource()
+            self.platform.mute()
+            self.platform.nextSource()
 
         elif e == 'anticlockwise':
             self.activeScreen= 'sourceVol'
             self.MoveIcon('startIcons')  # get the icons moving is not already
             self.srcChangeTimer.start()
             self.events.CtrlPress -= self.MenuAction
-            self.mute()
-            self.prevSource()
+            self.platform.mute()
+            self.platform.prevSource()
 
         elif e =='stopCtrl':
             self.activeScreen      = self.baseScreen
@@ -257,13 +257,13 @@ class Controller:
         self.activeScreen= self.baseScreen
 
     def ScreenSave(self, e):
-        # print("Platform: ScreenSave: event %s, screen %s" % (e,self.activeScreen))
-        if   e == 'silence_detected':
+        print("Platform: ScreenSave: event %s, screen %s" % (e,self.activeScreen))
+        if   e == 'time_screensave':
             if not self.screensaveTimer.is_alive():
                 self.screensaveTimer.start()
-        elif e == 'signal_detected':
+        elif e == 'cancel_screensave':
+            self.screensaveTimer.cancel()
             if self.activeScreen == 'screenSaver':
-                self.screensaveTimer.cancel()
                 self.activeScreen   = self.preScreenSaver
         elif e == 'start_screensave':
             if self.activeScreen != 'screenSaver':
@@ -293,6 +293,22 @@ class Controller:
             self.MoveIcon('startIcons')  # get the icons moving is not already
             # print "Controller.MenuAction> next screen", self.activeScreen
 
+    def AudioAction(self, e):
+        if e == 'silence_detected':
+            self.platform.mute()
+            self.ScreenSave('time_screensave')
+
+        elif e == 'signal_detected':
+            self.platform.unmute()
+            self.ScreenSave('cancel_screensave')
+
+        elif e == 'capture':
+            print("Controller.AudioAction> capture event not implemented")
+
+        else:
+            print("Controller.AudioAction> unknown event ",e)
+
+
     def startMenu(self):
         self.menuMode   = True
         self.events.CtrlTurn  -= self.SourceChange   #when the control knob or switch is pressed
@@ -305,47 +321,31 @@ class Controller:
         self.events.CtrlTurn  += self.SourceChange   #when the control knob or switch is pressed
         self.events.CtrlTurn  -= self.MenuAction   #when the control knob or switch is pressed
 
-    def menuNext(self):
-        # find the current sequence position, increment and up the active source
-        pos = self.menuSequence[self.activeScreen]
-        if pos == len(self.menuSequence)-1:
-            pos= 0
-        else:
-            pos += 1
-        for s, p in self.menuSequence.items():
-            if p == pos:
-                self.baseScreen   = s
-                self.activeScreen = s
-                return s
-
     def menuPrev(self):
-        # find the current sequence position, increment and up the active source
-        pos = self.menuSequence[self.activeScreen]
-        if pos == 0 :
-            pos= len(self.menuSequence)-1
-        else:
-            pos -= 1
-        for s, p in self.menuSequence.items():
-            if p == pos:
-                self.baseScreen   = s
-                self.activeScreen = s
-                return s
+        self.baseScreen   = self.screenmenu.prev
+        self.activeScreen = self.baseScreen
+        print("Controller.menuPrev> active screen %s" % (self.activeScreen))
+        return self.screenmenu.curr
+
+    def menuNext(self):
+        self.baseScreen   = self.screenmenu.next
+        self.activeScreen = self.baseScreen
+        print("Controller.menuPrev> active screen %s" % (self.activeScreen))
+        return self.screenmenu.curr
 
     def SystemChange(self, e='error'):
         print("Controller.SystemChange> event ", e)
 
-    def ShutdownAction(self, e='error'):
-        self.activeScreen= 'shutdown'
-        Timer.cancel_all()
-        self.shutdownTimer.start()
-        print("Controller.Shutdown> event ", e)
-
-    def AudioAction(self, e=None):
-        print("Controller.AudioAction> %s event received" % e)
-        if e == 'capture':
-            print("Controller.AudioAction> capture event not implemented")
-        else:
-            print("Controller.AudioAction> unknown event ", e)
+    def PlatformAction(self, e='error'):
+        if e == 'shutdown':
+            self.activeScreen= 'shutdown'
+            Timer.cancel_all()
+            self.shutdownTimer.start()
+            print("Controller.Platform> event ", e)
+        elif e == 'phones_in':
+            self.platform.mute()
+        elif e == 'phones_out':
+            self.platform.unmute()
 
 
     """
@@ -357,12 +357,14 @@ class Controller:
     def run(self):
 
         print("Controller.run> preDAC startup configured at ", time.gmtime())
-
+        self.startAction()
+        
         """ loop around updating the screen and responding to events """
         while(True):
             self.platform.captureAudio()      # should become event driven
             """ return the current screen object to run """
             Timer.checkTimers()
+            self.platform.checkKeys()
             # temp taken out
             # if self.menuMode:
             #     self.screens['screenTitle'].draw( basis, self.screenList[self.activeScreen]['title'] )

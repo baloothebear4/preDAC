@@ -61,7 +61,7 @@ class AudioData():
         self.bins     = {'left': data, 'right':data}
         self.samples  = {'left': data, 'right':data}
         self.monosamples    = data
-        self.signalDetected = True
+        self.signalDetected = False
         self.peakwindow     = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
 
     def filter(self, signal, fc):
@@ -144,7 +144,7 @@ class AudioProcessor(AudioData):
         self.bins['left']     = self.calcFFT(self.samples['left'])
         self.bins['right']    = self.calcFFT(self.samples['right'])
         self.vu['left'], self.peak['left']  = self.VU('left')
-        self.vu['left'], self.peak['right'] = self.VU('right')
+        self.vu['right'], self.peak['right'] = self.VU('right')
         self.detectSilence()
                 # other functions to calculate DC offset, noise level, silence, RMS quiet etc can go here
 
@@ -155,10 +155,10 @@ class AudioProcessor(AudioData):
 
         if self.signalDetected and ave_level < SILENCETHRESOLD:
             self.signalDetected = False
-            self.events.ScreenSaving('silence_detected')
-        elif signal_level >= SILENCETHRESOLD:
+            self.events.Audio('silence_detected')
+        elif not self.signalDetected and signal_level >= SILENCETHRESOLD:
             self.signalDetected = True
-            self.events.ScreenSaving('signal_detected')
+            self.events.Audio('signal_detected')
         #else: no change to the silence detect state
 
 
@@ -199,19 +199,22 @@ class AudioProcessor(AudioData):
             startbin = bincount+1
 
 
-        print("AudioProcessor.createBands>  %d bands determined: %s" % (len(centres), centres))
+        print("AudioProcessor.createBands>  %d bands determined at: %s" % (len(centres), ["%1.0f" % f for f in centres]))
         return intervalUpperF
 
     def VU(self,channel):
         """ normalise to 0-1 """
-        SCALE = 100
-        OFFSET= 110
+        PeakMax = 20*math.log(2*2^16)  #about 196
+        VUmax   = PeakMax/math.sqrt(2)
+        PeakOff = 109
+        VUOff   = 127
 
-        peak = (20*math.log( np.abs(np.max(self.samples[channel])-np.min(self.samples[channel])), 10 )+OFFSET)/SCALE
-        vu   = (20*math.log( self.rms(self.samples[channel]), 10)+OFFSET)/SCALE
+        peak = 20*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
+        vu   = 20*math.log( self.rms(self.samples[channel]), 10)
+        # print("vu ", vu, "peak", peak)
         peakave = self.peakwindow[channel].average(peak)
 
-        return (vu, peakave)
+        return ((vu+VUOff)/(VUmax+VUOff), (peakave+PeakOff)/(PeakMax+PeakOff))
 
 
     """ use this to shift the noise floor eg: RMS 20 - 5000 -> 0->5000"""
@@ -219,7 +222,7 @@ class AudioProcessor(AudioData):
         if x > y:
             return x
         else:
-            return 1
+            return y
 
     def calcReadtime(self,start=True):
         if start:
@@ -227,7 +230,7 @@ class AudioProcessor(AudioData):
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            print('AudioProcessor:calcReadtime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
+            # print('AudioProcessor:calcReadtime> %3.3fms, %3.3f' % (np.mean(self.readtime)*1000, self.readtime[-1]))
 
 
     def calcDCoffset(self, data):
@@ -340,6 +343,11 @@ class AudioProcessor(AudioData):
     def rms(self, y):
         return np.abs(np.mean(np.square(y)))
 
+    def processstatus(self):
+        text  = "Process audio> signal det %s" % self.signalDetected
+        text += "\n L%10f-^%10f^%10f\t%10f R"% (self.vu['left'], self.peak['left'], self.peak['right'], self.vu['right'])
+        text += "\n Peak Spectrum L:%f, R:%f" % (max(self.bins['left']), max(self.bins['right']) )
+        return text
 
 
 

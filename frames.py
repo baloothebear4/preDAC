@@ -26,7 +26,7 @@ class VolumeSourceFrame(Frame):
     def __init__(self, bounds, platform, display, scale, Halign='right'):
         Frame.__init__(self, display.boundary, platform, display, (scale,1.0), 'middle', Halign)
         self += VolumeTextFrame(self.coords, platform, display, "top", 0.7, "22")        # this are the widest number
-        self += SourceTextFrame(self.coords, platform, display, 'bottom', 0.3, "streamer") # this are the widest source text
+        self += SourceTextFrame(self.coords, platform, display, 'bottom', 0.3, self.platform.longestSourceText) # this are the widest source text
         # self += OutlineFrame(self.coords, platform, display)
         self.check()
 
@@ -42,7 +42,7 @@ class dbVolumeSourceFrame(Frame):
     def __init__(self, bounds, platform, display, scale, Halign='right'):
         Frame.__init__(self, display.boundary, platform, display, scalers=(scale, 1.0), Halign=Halign)
         self += dbVolumeTextFrame(self.coords, platform, display, V='top', Y=0.7, text='-64.0dB')        # this are the widest number
-        self += SourceTextFrame(self.coords, platform, display, V='bottom', Y=0.3, text='streamer') # this are the widest source text
+        self += SourceTextFrame(self.coords, platform, display, V='bottom', Y=0.3, text=self.platform.longestSourceText) # this are the widest source text
         # self += OutlineFrame(self.coords, platform, display)
         self.check()
 
@@ -74,12 +74,13 @@ class TextFrame(Frame):
         Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(1.0,Y), Valign=V, Halign='centre')
         # scale the font so the widest fits
         self.text   = text
-        self._width = self.w+1
+        self._width, self._height = [self.w+1, self.h+1]
         fontsize    = self.h
         while self._width > self.w or self._height > self.h:
             self.font   = make_font("arial.ttf", fontsize)
             self._width, self._height = display.textsize(text, self.font)
             fontsize -= 1
+        print("TextFrame> font size", fontsize, self._width, self._height, text)
 
     def draw(self, basis):
         self.display.drawFrameCentredText(basis, self, self.text, self.font)
@@ -95,11 +96,15 @@ class VolumeTextFrame(TextFrame):
 
 class SourceTextFrame(TextFrame):
     def draw(self, basis):
-        self.display.drawFrameCentredText(basis, self, self.platform.activeSource, self.font)
+        self.display.drawFrameCentredText(basis, self, self.platform.activeSourceText, self.font)
 
 class dbVolumeTextFrame(TextFrame):
     def draw(self, basis):
-        self.display.drawFrameCentredText(basis, self, "%3.1fdB" % self.platform.volume_db, self.font)
+        if self.platform.muted:
+            text = "Mute"
+        else:
+            text = "%3.1fdB" % self.platform.volume_db
+        self.display.drawFrameCentredText(basis, self, text, self.font)
 
 class MenuFrame(TextFrame):
     def draw(self, basis):
@@ -116,7 +121,7 @@ class SourceIconFrame(Frame):
         self.icons          = {}  # dictionary of images, sources as keys
 
         #Build a dict of all the icon files to be used
-        sources = self.platform.sourcesAvailable()
+        sources = self.platform.sourcesAvailable
         for s in sources:
             self.files.update( {s: self.platform.getSourceIconFiles(s)} )
 
@@ -135,8 +140,8 @@ class SourceIconFrame(Frame):
         # print( "SourceIcon.__init__> ready", self.icons)
 
     def draw(self, basis):
-        print ("SourceIconFrame.draw>", self.platform.activeSource, self.platform.currentIcon)
-        self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource][self.platform.currentIcon])
+        # print ("SourceIconFrame.draw>", self.platform.activeSource.curr, self.platform.currentIcon)
+        self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource.curr][self.platform.currentIcon])
 
 class VUFrame(Frame):
     """
@@ -167,7 +172,7 @@ class VUFrame(Frame):
         # self.display.outline( basis, self, outline="white")
         self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
         vu      = self.platform.vu[self.channel]
-        w, h    = basis.textsize(self.ch_text, self.font)
+        w, h    = basis.textsize('R', self.font)
         xoffset = w*VUFrame.TEXTGAP
         maxw    = self.w-xoffset
         wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
@@ -369,6 +374,14 @@ class SourceVolScreen(Frame):   # comprises volume on the left, spectrum on the 
         self += SourceIconFrame(display.boundary, platform, display, 0.6, 'left')
         self.check()
 
+class SourceVUVolScreen(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += dbVolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
+        self += VUV2chFrame(display.boundary, platform, display, 0.3, 'centre')
+        self += SourceIconFrame(display.boundary, platform, display, 0.3, 'left')
+        self.check()
+
 class VUScreen(Frame):   # comprises volume on the left, spectrum on the right
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
@@ -412,7 +425,7 @@ class depVolumeSourceFrame(Frame):
 
             self.maxsh = 0
             self.maxsw = 0
-            for i in self.platform.sourceText():
+            for i in self.platform.sourceText:
                 w, h = basis.textsize(text=i, font=self.srcfont)  # calc the size of the highest object
                 if h>self.maxsh:
                     self.maxsh = h
@@ -440,7 +453,7 @@ class depVolumeSourceFrame(Frame):
         # drawCentredText( basis, x, y, self.twidth/2, vol, self.font, self.width)
         self.drawFrameLRCentredText( basis, x, y, self.twidth/2, vol, self.font, self.twidth)
 
-        src= self.platform.activeSourceText()
+        src= self.platform.activeSourceText
         w, h = basis.textsize(text=src, font=self.srcfont)
         #print "y h", self.y, h
         # drawCentredText( basis, x, self.y-self.maxsh/2, -2+self.maxsh/2, src,self.srcfont, self.maxsh)
@@ -465,7 +478,7 @@ class depVolumeSourceFrame(Frame):
         # drawCentredText( basis, x, y, self.twidth/2, vol, self.font, self.width)
         self.drawFrameLRCentredText( basis, x, y, self.twidth/2, vol, self.font, self.twidth)
 
-        src= self.platform.activeSourceText()
+        src= self.platform.activeSourceText
         w, h = basis.textsize(text=src, font=self.srcfont)
         #print "y h", self.y, h
         # drawCentredText( basis, x, self.y-self.maxsh/2, -2+self.maxsh/2, src,self.srcfont, self.maxsh)

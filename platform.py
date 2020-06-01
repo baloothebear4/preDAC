@@ -15,6 +15,7 @@
 
 from oleddriver   import internalOLED, frontOLED
 from processaudio import AudioProcessor
+from keyevents    import KeyEvent
 
 from rotenc import RotaryEncoder
 from pcf8574 import PCF8574
@@ -32,34 +33,36 @@ class Source:
     IconFiles = {   'streamer'  : ["Streamer.png"],
                     'dac'       : ["Dac.png"],
                     'cd'        : ["CD 0.png", "CD 60.png", "CD 120.png", "CD 180.png", "CD 240.png", "CD 300.png" ],
-                    'rec'       : ["Tape 0.png", "Tape 60.png", "Tape 120.png", "Tape 180.png", "Tape 240.png", "Tape 300.png"],
+                    'tape'      : ["Tape 0.png", "Tape 60.png", "Tape 120.png", "Tape 180.png", "Tape 240.png", "Tape 300.png"],
                     'aux'       : ["Aux.png"],
                     'phono'     : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"]  }
-    Text      = { 'streamer' : "Streamer", 'dac' : "DAC", 'cd': "CD", 'rec': "Tape", 'aux' : "AUX", 'phono' : "Phono" }
 
-    def __init__(self, Sequence, setSource):
-        self._activeSource      = AudioBoard.DEFAULT_SOURCE
-        self.setSource         = setSource
-        self.sourceSequence    = Sequence            # a dictionary mapping the sources to logical values
-        self.sourcesEnabled    = Source.Text.keys()       # List of available (can change as DAC settings are altered)
+    def __init__(self):
+        # self._activeSource      =
+        # self.setSource         = setSource
+        # self.sourceSequence    = Sequence            # a dictionary mapping the sources to logical values
+        self.sourcesEnabled    = Source.IconFiles.keys()       # List of available (can change as DAC settings are altered)
         self.currentIcon       = 0   # icon position in the list of icons for the current source
         self.screenName        = "description of current screen"
-
-    @property
-    def activeSource(self):
-        return self._activeSource
-
-    @activeSource.setter
-    def activeSource(self, source):
-        self._activeSource = source
+        self.activeSource      = ListNext(self.sourceLogic(), AudioBoard.DEFAULT_SOURCE)
 
     @property
     def activeSourceText(self):
-        return Source.Text[ self.activeSource ]
+        return AudioBoard.audioBoardMap[self.activeSource.curr][AudioBoard.SOURCETEXT]
 
     @property
-    def sourceText(self):
-        return Source.Text
+    def longestSourceText(self):
+        longest = 0
+        for s in AudioBoard.audioBoardMap:
+            l = len(AudioBoard.audioBoardMap[s][AudioBoard.SOURCETEXT])
+            if l > longest:
+                longest = l
+                text    = AudioBoard.audioBoardMap[s][AudioBoard.SOURCETEXT]
+        return text
+
+    @property
+    def widestSourceText(self):
+        return "Tape"
 
     def getSourceIconFiles(self, source):
         return Source.IconFiles[source]
@@ -68,58 +71,50 @@ class Source:
     def sourcesAvailable(self):
         return self.sourcesEnabled
 
-    def nextSource(self):
-        # find the current sequence position, increment and up the active source
-        pos = self.sourceSequence[self.activeSource]
-        if pos == len(self.sourceSequence)-1:
-            pos= 0
-        else:
-            pos += 1
-        for s, p in self.sourceSequence.iteritems():
-            if p == pos:
-                self.activeSource = s
-                self.currentIcon  = 0
-                self.setSource( s )
-                return s
-
     def prevSource(self):
-        # find the current sequence position, increment and up the active source
-        pos = self.sourceSequence[self.activeSource]
-        if pos == 0 :
-            pos= len(self.sourceSequence)-1
-        else:
-            pos -= 1
-        for s, p in self.sourceSequence.iteritems():
-            if p == pos:
-                self.activeSource = s
-                self.currentIcon  = 0
-                self.setSource( s )
-                return s
+        self.currentIcon  = 0
+        self.setSource( self.activeSource.prev )
+        return self.activeSource.curr
+
+    def nextSource(self):
+        self.currentIcon  = 0
+        self.setSource( self.activeSource.next )
+        return self.activeSource.curr
 
     def nextIcon(self):
-        if self.currentIcon+1 < len(Source.IconFiles[self.activeSource]):
+        if self.currentIcon+1 < len(Source.IconFiles[self.activeSource.curr]):
             self.currentIcon += 1
         else:
             self.currentIcon  = 0
         # print "Source.nextIcon>", self.currentIcon,     len(Source.IconFiles[self.activeSource])
 
+    def sourceLogic(self):
+        #collect the signal sources into a list
+        logic = []
+        for s in AudioBoard.audioBoardMap:
+            if  AudioBoard.audioBoardMap[s][AudioBoard.SIGNAL]:
+                logic.append(s)
+        print("AudioBoard.sourceLogic > ", logic)
+        return logic
 
 
-class AudioBoard(Source):  #subclass so that there is only 1 interface point to all the HW classes
-    """                source   board relayi2c1 pin ref, gain , text """
-    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'tape'],
-                      'cd'      : [ 2,               5,  False, 'cd'],
-                      'dac'     : [ 3,               6,  False, 'dac'],
-                      'aux'     : [ 4,               7,  False, 'aux'],
-                      'phono'   : [ 5,               3,  True,  'phono'],
-                      'streamer': [ 6,               2,  False, 'streamer'],
-                      'mute'    : [ 7,               1,  False, 'mute'  ],
-                      'gain'    : [ 8,               0,  False, 'gain'  ]
+class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface point to all the HW classes
+    """                source   board relayi2c1 pin ref, gain , text, signal? """
+    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'Tape', True],
+                      'cd'      : [ 2,               5,  False, 'CD', True],
+                      'dac'     : [ 3,               6,  False, 'DAC', True],
+                      'aux'     : [ 4,               7,  False, 'Aux', True],
+                      'phono'   : [ 5,               3,  True,  'Phono', True],
+                      'streamer': [ 6,               2,  False, 'Streamer', True],
+                      'mute'    : [ 7,               1,  False, 'mute', False],
+                      'gain'    : [ 8,               0,  False, 'gain', False]
                     }
+
     POS             = 0   #index to the actualinput position on the Board
     PIN             = 1   #index to the I2C1 chip PIN to control this item
     GAINSTATE       = 2
     SOURCETEXT      = 3
+    SIGNAL          = 4
 
     OFF             = False
     ON              = True
@@ -141,8 +136,8 @@ class AudioBoard(Source):  #subclass so that there is only 1 interface point to 
                          'phonesdetect' : AudioBoard.OFF,
                          'mute'         : AudioBoard.OFF,
                          'gain'         : AudioBoard.OFF }
-        self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
-        Source.__init__(self, self.sourceLogic(), self.setSource)
+        self.i2c1 = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
+        Source.__init__(self)
 
         """ run through the channels and set up the relays"""
         for source in AudioBoard.audioBoardMap:
@@ -157,10 +152,10 @@ class AudioBoard(Source):  #subclass so that there is only 1 interface point to 
         """ set up the default source and unmute """
         self.setSource(self.State['source'])
 
-        print("AudioBoard._init__ > ready", self.i2c1.port)
+        print("AudioBoard.__init__ > ready", self.audiostatus())
 
     @property
-    def muteState(self):
+    def muted(self):
         return self.State['mute']
 
     @property
@@ -171,19 +166,12 @@ class AudioBoard(Source):  #subclass so that there is only 1 interface point to 
     def phonesdetectState(self):
         return self.State['phonesdetect']
 
+    @property
     def gaindB(self):
         if self.gainState:
             return AudioBoard.GAINONDB
         else:
             return AudioBoard.GAINOFFDB
-
-    def sourceLogic(self):
-        logic = {}
-        for s in AudioBoard.audioBoardMap:
-            if s != 'mute' and s != 'gain':
-                logic.update({s: AudioBoard.audioBoardMap[s][AudioBoard.POS]})
-        print("AudioBoard.sourceLogic > ", logic)
-        return logic
 
     def chLogic(self):
         logic = {}
@@ -196,7 +184,7 @@ class AudioBoard(Source):  #subclass so that there is only 1 interface point to 
         """ Set the HW to switch on the source selected"""
         self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['source']][AudioBoard.PIN] ] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
-        self.gain([ AudioBoard.audioBoardMap[source][AudioBoard.GAINSTATE] ])
+        self.gain(AudioBoard.audioBoardMap[source][AudioBoard.GAINSTATE] )
 
         print("AudioBoard.setSource > switch from ", self.State['source'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port)
         print("AudioBoard.setSource > status: ", self.State)
@@ -235,15 +223,18 @@ class AudioBoard(Source):  #subclass so that there is only 1 interface point to 
         """ phonesdetect pin has triggered an interupt """
         if GPIO.input(AudioBoard.PHONESDETECTPIN) == AudioBoard.PHONES_IN:
             self.State['phonesdetect'] = True
-            self.events.VolTurn('mute')
+            self.events.Platform('phones_in')
             print("AudioBoard.phonesdetect> Headphones insert detected")
         else:
             self.State['phonesdetect'] = False
             print("AudioBoard.phonesdetect> Headphones removed")
-            self.events.VolTurn('unmute')
+            self.events.Platform('phones_out')
 
     def readAudioBoardState(self):
         return self.State
+
+    def audiostatus(self):
+        return "AudioBoard> state %s, active %s, ports %s" % (self.State, self.activeSource, self.i2c1.port)
 
 class ControlBoard:
     """
@@ -269,12 +260,12 @@ class ControlBoard:
         """ set up the controller knob events to change the source and menus """
         self.controllerKnob = RotaryEncoder( ControlBoard.PIN_A, ControlBoard.PIN_B, ControlBoard.BUTTON, self.controlKnobEvent )
 
-        print("ControlBoard._init__ > ready")
+        print("ControlBoard.__init__ > ready")
 
     def shutdown(self,event):
         print("ControlBoard.shutdown > shutdown request received", event)
         self.mute()
-        self.events.Shutdown('Shutdown')
+        self.events.Platform('shutdown')
 
     def poweroff(self,event=''):
         print("ControlBoard.poweroff ", event)
@@ -336,7 +327,7 @@ class RemoteController:
             elif words[2] == "KEY_VOLUMEDOWN":
                 self.events.RemotePress('volume_down')
             elif words[2] == "KEY_POWER" and words[1] == "00":
-                self.events.Shutdown('mute')
+                self.events.Platform('shutdown')
             elif words[2] == "KEY_LEFT" and words[1] == "00":
                 self.events.CtrlTurn('anticlockwise')
             elif words[2] == "KEY_RIGHT" and words[1] == "00":
@@ -354,19 +345,19 @@ class RemoteController:
 
 """ Data model for all volume related items """
 class Volume():
-    def __init__(self, read_gain):
-        self.gaindB          = read_gain   #callback to find gain setting True
+    def __init__(self):
+        # self.gaindB          = read_gain   #callback to find gain setting True
         self.demandVolume    = VolumeBoard.DEFAULT_VOL
         self.volume_raw      = VolumeBoard.DEFAULT_VOL # this is the -0.5 x the dB attenuation, + the gain + 12dB is the total
         self.premuteVolume   = VolumeBoard.DEFAULT_VOL
 
     @property   #volume as a percentage
     def volume(self):
-        return int(self.volume_raw/VolumeBoard.MAX_VOLUME)
+        return self.volume_raw/VolumeBoard.MAX_VOLUME
 
     @property
     def volume_db(self):
-        return -0.5*self.volume_raw + self.gaindB()
+        return 0.5*(self.volume_raw-VolumeBoard.MAX_VOLUME) + self.gaindB
 
 
 class VolumeBoard(PCF8574, Volume):
@@ -383,19 +374,17 @@ class VolumeBoard(PCF8574, Volume):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 100
+    DEFAULT_VOL  = 80
 
     """ Map of the volume relay step to the i2c pin """
     # RELAYMAP     = ( 3, 2, 1, 7, 6, 5, 4)
     # RELAYMAP     = ( 7, 1, 2, 3, 6, 5, 4)
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
 
-    def __init__(self, events, read_gain):
+    def __init__(self, events):
         self.i2c2         = PCF8574(VolumeBoard.i2c2_port, VolumeBoard.i2c2_address)
         self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_B, VolumeBoard.BUTTON, self.volKnobEvent )
-        Volume.__init__(self, read_gain)   # volume data model
-
-
+        Volume.__init__(self)   # volume data model
         self.events       = events
 
         """ run through the channels and set up the relays"""
@@ -405,24 +394,31 @@ class VolumeBoard(PCF8574, Volume):
         """ set up the default volume """
         self.setVolume(VolumeBoard.DEFAULT_VOL)
 
-        print("VolumeBoard._init__ > ready", self.i2c2.port)
+        print("VolumeBoard._init__ > ready", self.volumestatus())
 
     def volKnobEvent(self, a):
         """ callback if the vol knob is turned or the button is pressed """
         """ ** Need to decide whether the volume write can be done in the interrupt? """
         if a == RotaryEncoder.CLOCKWISE:
-            if self.demandVolume < VolumeBoard.MAX_VOLUME: self.demandVolume +=1
-            self.events.VolTurn('vol_change')
+            if self.demandVolume < VolumeBoard.MAX_VOLUME+1: self.demandVolume +=1
+            self.events.VolKnob('vol_change')
         elif a == RotaryEncoder.ANTICLOCKWISE:
             if self.demandVolume > VolumeBoard.MIN_VOLUME: self.demandVolume -=1
-            self.events.VolTurn('vol_change')
+            self.events.VolKnob('vol_change')
         elif a == RotaryEncoder.BUTTONUP:
-            self.ev = 'Button up'
+            pass
         elif a == RotaryEncoder.BUTTONDOWN:
-            self.changeMute()
-            self.events.VolTurn('vol_change')
+            if self.volume_raw == VolumeBoard.MIN_VOLUME:
+                # unmute
+                self.demandVolume = self.premuteVolume
+                self.events.VolKnob('vol_change')
+            else:
+                # mute
+                self.premuteVolume = self.volume_raw
+                self.demandVolume = VolumeBoard.MIN_VOLUME
+                self.events.VolKnob('vol_change')
 
-        print("VolumeBoard.volKnobEvent > **check timing for interrupt update**", self.ev, self.demandVolume)
+        print("VolumeBoard.volKnobEvent >", a, self.demandVolume)
 
     def volumeUp(self):
         self.volKnobEvent(RotaryEncoder.CLOCKWISE)
@@ -442,26 +438,14 @@ class VolumeBoard(PCF8574, Volume):
         else:
             return False
 
-    def changeMute(self):
-        if self.volume_raw == VolumeBoard.MIN_VOLUME:
-            # unmute
-            self.demandVolume = self.premuteVolume
-            self.events.VolTurn('unmute')
-        else:
-            # mute
-            self.premuteVolume = self.volume_raw
-            self.demandVolume = VolumeBoard.MIN_VOLUME
-            self.events.VolTurn('mute')
-
 
     def detectMuteChange(self):
         """ use as part of the main loop to detect and implement volume changes """
-        if self.ev == 'Button down' and self.demandVolume == VolumeBoard.MIN_VOLUME:
-            return 'mute'
-        elif self.ev == 'Button down' and self.demandVolume != VolumeBoard.MIN_VOLUME:
-            return 'unmute'
+        if self.demandVolume == VolumeBoard.MIN_VOLUME:
+            self.events.VolKnob('mute')
         else:
-            return 'false'
+            self.events.VolKnob('unmute')
+
 
     def setVolume(self, volume):
         """ algorithm to set the volume steps in a make before break sequence to reduce clicks
@@ -484,16 +468,19 @@ class VolumeBoard(PCF8574, Volume):
         self.volume_raw = volume
         print("VolumeBoard.setVolume> demand %d, volume %d, \nVolumeBoard.setVolume>steps %s, \nVolumeBoard.setVolume>ports %s" % (self.demandVolume, self.volume_raw, relays, self.i2c2.port))
 
+    def volumestatus(self):
+        return "VolumeBoard> vol %f, vol_dB %f, ports %s" % (self.volume, self.volume_db, self.i2c2.port)
 
-class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioProcessor):
+class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioProcessor, KeyEvent):
     """ this is the HW abstraction layer and includes the device handlers and data model """
     def __init__(self, events):
         """ setup all the HW drivers and interfaces """
         ControlBoard.__init__(self, events)
         AudioBoard.__init__(self, events)
-        VolumeBoard.__init__(self, events, self.gaindB)
+        VolumeBoard.__init__(self, events)
         # RemoteController.__init__(self, events)
         AudioProcessor.__init__(self, events)
+        KeyEvent.__init__(self, events)
 
         try:
             self.internaldisplay   = internalOLED()
@@ -507,51 +494,102 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             self.frontdisplay = None
             print("Platform.__init__> failed to start front display")
 
-        """ start capturing samples """
-        self.captureAudio()
-
-        print("Platform.__init__> *** check if starting audio capture comes later in boot sequence")
-
-        # test data
-        # testdataL      = [0.5]*50
-        # testdataR      = [0.3]*50
-        # self.vu       = {'left': 0.6, 'right':0.6}
-        # self.peak     = {'left': 0.8, 'right':0.9}
-        # self.spectrum = {'left': testdataL, 'right': testdataR}
-
-
+        print("Platform.__init__>\n", self)
 
     def __str__(self):
-        text = ">"
+        text = " >> Displays:"
         if self.internaldisplay is not None:
             text += type(self.internaldisplay).__name__
-
         if self.frontdisplay is not None:
-            text += " >" + type(self.frontdisplay).__name__
-        # return "Platform> status: displays  %s, %s" % (type(self.internaldisplay).__name__, type(self.frontdisplay).__name__)
-        return "Platform> status: displays  %s" % ( text )
+            text += " , %s" % type(self.frontdisplay).__name__
+        text+= "\n %s\n" % self.audiostatus()
+        text+= " %s\n" % self.volumestatus()
+        text+= " %s" % self.processstatus()
+        return text
 
 # end Platform
 
+""" Class to manage lists eg of menu items or sources to find previous and next items """
+class ListNext:
+    def __init__(self, list, startItem):
+        self._list = list
+        self._curr = startItem
+
+    def findItemIndex(self, item):
+        for index, element in enumerate(self._list):
+            if element == item: return index
+        raise ValueError("ListNext.findItemIndex> item not found in list", item, self._list)
+
+    @property
+    def curr(self):
+        return self._curr
+
+    @curr.setter
+    def curr(self, v):
+        if v in self._list:
+            self._curr = v
+        else:
+            raise ValueError("ListNext.curr> item not found in list", v, self._list)
+
+    @property
+    def prev(self):
+        i = self.findItemIndex(self._curr)
+        if i > 0:
+            self.curr = self._list[i-1]
+        else:
+            self.curr = self._list[-1]
+        return self.curr
+
+    @property
+    def next(self):
+        i = self.findItemIndex(self._curr)
+        if i < len(self._list)-1:
+            self.curr =  self._list[i+1]
+        else:
+            self.curr =  self._list[0]
+        return self.curr
+
+    def __str__(self):
+        return "list>%s, current>%s" % (self._list, self.curr)
 
 """
     test code for remote control
 """
+
+# if __name__ == '__main__':
+#     from events import Events
+#     e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolKnob', 'VolPress', 'Pause', 'Start', 'Stop'))
+#
+#     """ ir controller test code """
+#     irRemote = RemoteController(e)
+#
+#     while True:
+#         keyname, updown = irRemote.checkRemoteKeyPress()
+#         if keyname != "no":
+#             print('%s (%s)' % (keyname, updown))
+#
+#     """ Volume knob test code """
+#     v = VolumeBoard()
+#
+#     while True:
+#         v.detectVolChange()
+#         time.sleep(0.1)
+
+
+""" test code for ListNext object """
+# if __name__ == '__main__':
+#     l = ['a','bb','ccc','dddd','eeeee']
+#     a = ListNext(l, 'bb')
+#     print(l)
+#     print (" curr %s next %s prev %s " % (a.curr, a.next, a.prev))
+#     a.prev
+#     a.prev
+#     a.prev
+#     a.prev
+#     print (" curr %s next %s prev %s " % (a.curr, a.next, a.prev))
+#     a.next
+#     a.next
+#     a.next
+#     print (" curr %s next %s prev %s " % (a.curr, a.next, a.prev))
 if __name__ == '__main__':
-    from events import Events
-    e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
-
-    """ ir controller test code """
-    irRemote = RemoteController(e)
-
-    while True:
-        keyname, updown = irRemote.checkRemoteKeyPress()
-        if keyname != "no":
-            print('%s (%s)' % (keyname, updown))
-
-    """ Volume knob test code """
-    v = VolumeBoard()
-
-    while True:
-        v.detectVolChange()
-        time.sleep(0.1)
+    a = AudioBoard()

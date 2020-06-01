@@ -63,7 +63,7 @@ class OLEDdriver(canvas):
         else:
             self.readtime.append(time.time()-self.startreadtime)
             if len(self.readtime)>100: del self.readtime[0]
-            print('OLEDdriver:calcDisplaytime> %3.3fms' % (1000*sum(self.readtime)/len(self.readtime)))
+            # print('OLEDdriver:calcDisplaytime> %3.3fms' % (1000*sum(self.readtime)/len(self.readtime)))
 
     def drawcallback(self, draw_fn):
         self.drawcallback = draw_fn
@@ -112,16 +112,16 @@ class OLEDdriver(canvas):
 
     def drawFrameLVCentredtext(self, basis, geo, text, font):
         w, h = basis.textsize(text=text, font=font)
-        if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
-        if h > geo.h: print("OLEDdriver.drawFrameCentredText> text to high for frame")
+        if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
+        if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text to high for frame")
         xy = (geo.x0, geo.centre[1]+h/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
     def drawFrameCentredText( self, basis, geo, text, font):
         """ text is written in the centre of the frame """
         w, h = basis.textsize(text=text, font=font)
-        if w > geo.w: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
-        if h > geo.h: print("OLEDdriver.drawFrameCentredText> text to high for frame")
+        if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text %s too wide %d, for frame %d" % (text, w, geo.w))
+        if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text %s too high %d, for frame %d" % (text, h, geo.h))
         xy = (geo.centre[0]-w/2, geo.centre[1]+h/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
