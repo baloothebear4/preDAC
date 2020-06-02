@@ -143,6 +143,47 @@ class SourceIconFrame(Frame):
         # print ("SourceIconFrame.draw>", self.platform.activeSource.curr, self.platform.currentIcon)
         self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource.curr][self.platform.currentIcon])
 
+class VUMeterFrame(Frame):
+    """
+        Displays a horizontal bar with changing colours at the top
+        - side is str 'left' or 'right'
+        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
+    """
+    BARHEIGHT    = 0.6  # % of frame height
+    TEXTGAP      = 1.5   # % of text width left bar starts
+    PEAKBARWIDTH = 1  # pixels
+
+    def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
+        self.limits  = limits
+        self.channel = channel
+        if channel == 'left':
+            self.ch_text = 'L'
+            V    = 'top'
+        elif channel == 'right':
+            self.ch_text = 'R'
+            V    = 'bottom'
+        else:
+            raise ValueError('VUMeterFrame.__init__> unknown channel', channel)
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 0.5), Valign=V, Halign='left')
+        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
+
+    def draw(self, basis):
+        # self.display.outline( basis, self, outline="white")
+        self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
+        vu      = self.platform.vu[self.channel]
+        w, h    = basis.textsize('R', self.font)
+        xoffset = w*VUFrame.TEXTGAP
+        maxw    = self.w-xoffset
+        wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
+
+        for limit in self.limits:
+            self.display.drawFrameMiddlerect(basis, self, limit[1], wh, xoffset)
+            if vu < limit[0]: break  #otherwise do the next colour
+            xoffset = w*VUFrame.TEXTGAP + maxw * limit[0]
+            wh[0]   = maxw * (vu - limit[0])
+
+
 class VUFrame(Frame):
     """
         Displays a horizontal bar with changing colours at the top
@@ -246,8 +287,11 @@ class SpectrumFrame(Frame):
     BARWMIN   = 1
     BARWMAX   = 5
 
-    def __init__(self, bounds, platform, display, channel, scale):
-        self.channel = channel
+    def __init__(self, bounds, platform, display, channel, scale, right_offset=0, colour='white'):
+        self.channel        = channel
+        self.right_offset   = right_offset
+        self.colour         = colour
+
         if channel == 'left':
             self.ch_text = 'L'
         elif channel == 'right':
@@ -273,10 +317,15 @@ class SpectrumFrame(Frame):
         print("SpectrumFrame.__init__> max bars=%d, octave spacing=1/%d, num bars=%d, width=%d" % (self.max_bars, spacing, self.bars, self.barw))
 
     def draw(self, basis):
-        x = 0
+        if self.channel=='right':
+            x = self.right_offset
+            c = self.colour
+        else:
+            x = 0
+            c = "white"
         freq_power = self.platform.packFFT(self.bar_freqs, self.channel)
         for i in range(0, self.bars):
-            self.display.drawFrameBar(basis, self, x, freq_power[i], self.barw, "white" )
+            self.display.drawFrameBar(basis, self, x, freq_power[i], self.barw, c )
             x += SpectrumFrame.BARGAP+self.barw
 
     @property
@@ -305,7 +354,14 @@ class Spectrum2chFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
         self += SpectrumFrame(self.coords, platform, display, 'left', 0.5 )
-        self += SpectrumFrame(self.coords, platform, display, 'right', 0.5 )
+        self += SpectrumFrame(self.coords, platform, display, 'right', 0.5, colour='white' )
+        self.check()
+
+class SpectrumStereoFrame(Frame):
+    def __init__(self, bounds, platform, display, scale, H):
+        Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
+        self += SpectrumFrame(self.coords, platform, display, 'left', 1.0 )
+        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 3, 'red' )
         self.check()
 
 
@@ -331,6 +387,14 @@ class FullSpectrumScreen(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += Spectrum2chFrame(display.boundary, platform, display, 1.0, 'centre')
+        self.check()
+
+class StereoSpectrumScreen(Frame):
+    """ Volume/Source on left - Stereo Spectrum overlaid """
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'right')
+        self += SpectrumStereoFrame(display.boundary, platform, display, 0.8, 'left')
         self.check()
 
 class ScreenTitle(Frame):

@@ -90,8 +90,8 @@ def frametest(display):
     scaled_frames = (VUVFrame, SpectrumFrame)
     # frames = (VU2chFrame, VUV2chFrame, Spectrum2chFrame)
     limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
-
-    p = Platform()
+    events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
+    p = Platform(events, True)
     if display=='int':
         d = p.internaldisplay
     else:
@@ -111,16 +111,17 @@ def frametest(display):
     # a = f(geo.coords, p, d, 1.0 )
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    # f = VolumeSourceFrame
-    # a = f(geo.coords, p, d, 0.2, 'right' )
+    f = VUMeterFrame
+    a = f(geo.coords, p, d, 'left', limits )
 
-    a = testScreen1(p, d)
+    # a = testScreen1(p, d)
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
+    # a = StereoSpectrumScreen(p, d)
     d.draw(a)
 
     print( "Drawn: %s" % ( a) )
-    # time.sleep(3)
+    time.sleep(5)
 
     #
     #
@@ -271,7 +272,7 @@ def geometrytest():
 if __name__ == "__main__":
     try:
         geometrytest()
-        # frametest('int')
-        screentest('front')
+        frametest('front')
+        # screentest('front')
     except KeyboardInterrupt:
         pass
