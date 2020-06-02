@@ -59,7 +59,7 @@ class VolumeAmountFrame(Frame):
 
     def draw(self, basis):
 
-        self.display.drawFrameTriange( basis, self, 1.0, fill="black" )
+        self.display.drawFrameTriange( basis, self, 1.0, fill="red" )
         vol = self.platform.volume
         self.display.drawFrameTriange( basis, self, vol, fill="white" )
 

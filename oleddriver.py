@@ -150,7 +150,7 @@ class OLEDdriver(canvas):
         xy2 = self.trxy( (geo.x0+geo.w*pc, geo.y0) )
         # print("triangle at ", ( xy, xy1, xy2 ), slope, pc)
         # print("Frame", geo.norm(), geo.abcd, geo.wh)
-        basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline="white" )
+        basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline=fill )
 
     def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
         coords = (geo.x0+x, geo.y0, geo.x0+x+w, geo.y0+geo.y1*ypc)

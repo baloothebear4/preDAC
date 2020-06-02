@@ -13,6 +13,7 @@ from framecore import Geometry, Frame
 from frames import *
 from platform import Platform
 import time
+from events import Events
 
 """
     Frame & Geometry Test code
@@ -137,8 +138,8 @@ def frametest(display):
     #     time.sleep(1)
 
 def screentest(display):
-
-    p = Platform()
+    events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
+    p = Platform(events, True)
     if display=='int':
         d = p.internaldisplay
     else:
@@ -271,6 +272,6 @@ if __name__ == "__main__":
     try:
         geometrytest()
         # frametest('int')
-        screentest('int')
+        screentest('front')
     except KeyboardInterrupt:
         pass

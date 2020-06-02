@@ -55,11 +55,13 @@ class WindowAve:
 class AudioData():
     def __init__(self):
         data          = [0.5]*50
+        data_s        = np.arange(FRAMESIZE)
+
         self.vu       = {'left': 0.5, 'right':0.6}
         self.peak     = {'left': 0.8, 'right':0.9}
         self.spectrum = {'left': data, 'right':data}
         self.bins     = {'left': data, 'right':data}
-        self.samples  = {'left': data, 'right':data}
+        self.samples  = {'left': data_s, 'right':data_s}
         self.monosamples    = data
         self.signalDetected = False
         self.peakwindow     = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
