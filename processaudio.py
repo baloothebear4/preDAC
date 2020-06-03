@@ -31,7 +31,7 @@ SILENCESAMPLES  = 5 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
 RMSNOISEFLOOR   = -66  #dB
-SILENCETHRESOLD = 0.0001
+SILENCETHRESOLD = 0.05
 
 WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
@@ -43,7 +43,7 @@ DCOFFSETSAMPLES = 200
 class WindowAve:
     """ Class to find the moving average of a set of window of points """
     def __init__(self, size):
-        self.window = [0]*int(size)
+        self.window = [1.0]*int(size)
         self.size   = int(size)
 
     def average(self, data):
@@ -51,6 +51,9 @@ class WindowAve:
         self.window.insert(0, data)
         del self.window[-1]
         return sum(self.window)/len(self.window)
+
+    def reset(self):
+        self.window = [1.0]*int(self.size)
 
 class AudioData():
     def __init__(self):
@@ -168,11 +171,13 @@ class AudioProcessor(AudioData):
 
     def detectSilence(self):
         # use hysterises - quick to detect a signal, slow to detect silience (5 seconds)
-        signal_level = self.rms(self.samples['left'])
+        signal_level = self.vu['left']
         ave_level    = self.silence.average(signal_level)
 
         if self.signalDetected and ave_level < SILENCETHRESOLD:
             self.signalDetected = False
+            print("ProcessAudio.detectSilence> at", ave_level)
+            self.silence.reset()
             self.events.Audio('silence_detected')
         elif not self.signalDetected and signal_level >= SILENCETHRESOLD:
             self.signalDetected = True

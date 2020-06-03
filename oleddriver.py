@@ -12,7 +12,7 @@ v1. 20 May 2020   Original, based on OLEDbar() class
 """
 
 
-import time, sys, os
+import time, sys, os, math
 
 import datetime
 from PIL import ImageFont, Image, ImageOps
@@ -103,7 +103,7 @@ class OLEDdriver(canvas):
         basis.rectangle(self.trabcd(coords), fill=fill)
 
     def drawFrameCentrerect(self, basis, geo, fill, wh, yoffset):
-        """ xoffset is how far from the left side to draw the rect
+        """ yoffset is how far from the bottom side to draw the rect
             size is set to the given height"""
         if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
         if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
@@ -155,6 +155,36 @@ class OLEDdriver(canvas):
     def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
         coords = (geo.x0+x, geo.y0, geo.x0+x+w, geo.y0+geo.y1*ypc)
         basis.rectangle( self.trabcd(coords), fill=fill)
+
+    def drawFrameCentredCircle(self, basis, geo, r, y, colour ):
+        # print("Circle", geo.centre, r, y)
+        coords = (geo.centre[0]-r, y+geo.centre[1]+r, geo.centre[0]+r, y+geo.centre[1]-r )
+        basis.ellipse( self.trabcd(coords), fill=colour, outline='white' )
+        # basis.ellipse( self.trabcd((21,5,41,25)), fill='white', outline='white' )
+
+    def drawFrameCentredVector(self, basis, geo, len, val, yoffset, colour ):
+        # print("drawFrameCentredVector> len %d, val %f, yoffset %d" % (len, val, yoffset))
+        ab     = self.anglerange(geo.w, len)
+        angle  = 180-(ab[0] + val * (ab[1]-ab[0]))
+        xy     = self.posn(angle, len)
+        # print("angle %s, xy %s, ab %s" % (angle, xy, ab))
+        coords = ( geo.centre[0], yoffset,geo.centre[0]+xy[0], yoffset+xy[1] )
+        basis.line( self.trabcd(coords), fill=colour)
+
+    def posn(self, angle, length):
+        dx = int(math.cos(math.radians(angle)) * length)
+        dy = int(math.sin(math.radians(angle)) * length)
+        return (dx, dy)
+
+    def anglerange(self, w, len):
+        # print("Anglerange", w, len)
+        if len-w/2<0:
+            angle_min = 0
+        else:
+            xmin=w/2
+            angle_min = int(math.degrees(math.acos(xmin/len)))
+        angle_max = 180-angle_min
+        return (angle_min, angle_max)
 
     def draw_status(self, vol, source, mute, gain, headphonedetect):
         """ simple dignostic to see the current source channel and volume setting """

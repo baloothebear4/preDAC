@@ -143,46 +143,64 @@ class SourceIconFrame(Frame):
         # print ("SourceIconFrame.draw>", self.platform.activeSource.curr, self.platform.currentIcon)
         self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource.curr][self.platform.currentIcon])
 
+
+class VUMeterBackground(Frame):
+    """
+        Background for the VU Meter comprising
+        - a horiziontal line
+        - calibrated dB level markers
+        - a needle base
+    """
+    FONTH = 0.3  # as a percentage of the overall frame height
+    PIVOT = 0.6  # % of the frame height the pivot is below
+    CENTRE= 0.2  # % of the frame height the size of the Centre piece
+    LINEH = 1-FONTH-0.1  # % of the frame width the size of the line piece
+    LINEW = 0.8
+
+    def __init__(self, bounds, platform, display, channel):  # size is a horizontal scaling factor
+        self.channel = channel
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 1.0), Valign='top', Halign=channel)
+        self.font   = make_font("arial.ttf", self.h*VUMeterBackground.FONTH)
+
+    def draw(self, basis):
+        self.display.drawFrameTopCentredText(basis, self, "-40 -10 0 3 6", self.font)
+        self.display.drawFrameCentredCircle(basis, self, self.h*VUMeterBackground.CENTRE, -self.h*VUMeterBackground.PIVOT, 'grey' ) #
+        self.display.drawFrameCentrerect(basis, self, 'red', (self.w*VUMeterBackground.LINEW, 0), self.h*VUMeterBackground.LINEH  )
+        # self.display.outline( basis, self, outline="red")
+
+class VUMeterNeedle(Frame):
+    """
+        Draws a line as a swinging needle in response to the VU level
+        - ** may needs some damping to make more realistic or analogue
+        - has a narrow width
+        - pivots from a point below the screen
+    """
+    NEEDLEW      = 1  # pixels
+
+    def __init__(self, bounds, platform, display, channel):  # size is a horz scaling factor
+        self.channel = channel
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 1.0), Valign='top', Halign=channel)
+
+    def draw(self, basis):
+        vu        = self.platform.vu[self.channel]
+        needlelen = self.h*(1+VUMeterBackground.PIVOT)
+        self.display.drawFrameCentredVector(basis, self, needlelen , vu, -self.h*VUMeterBackground.PIVOT, 'white')
+
 class VUMeterFrame(Frame):
     """
-        Displays a horizontal bar with changing colours at the top
+        Composite frame of a meter background and a moving needle
         - side is str 'left' or 'right'
         - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
     """
-    BARHEIGHT    = 0.6  # % of frame height
-    TEXTGAP      = 1.5   # % of text width left bar starts
-    PEAKBARWIDTH = 1  # pixels
 
-    def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
-        self.limits  = limits
+    def __init__(self, bounds, platform, display, channel, size):  # size is a scaling factor
         self.channel = channel
-        if channel == 'left':
-            self.ch_text = 'L'
-            V    = 'top'
-        elif channel == 'right':
-            self.ch_text = 'R'
-            V    = 'bottom'
-        else:
-            raise ValueError('VUMeterFrame.__init__> unknown channel', channel)
 
-        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 0.5), Valign=V, Halign='left')
-        self.font   = make_font("arial.ttf", self.h*VUFrame.BARHEIGHT)
-
-    def draw(self, basis):
-        # self.display.outline( basis, self, outline="white")
-        self.display.drawFrameLVCentredtext(basis, self, self.ch_text, self.font)
-        vu      = self.platform.vu[self.channel]
-        w, h    = basis.textsize('R', self.font)
-        xoffset = w*VUFrame.TEXTGAP
-        maxw    = self.w-xoffset
-        wh      = [vu*maxw, self.h*VUFrame.BARHEIGHT]
-
-        for limit in self.limits:
-            self.display.drawFrameMiddlerect(basis, self, limit[1], wh, xoffset)
-            if vu < limit[0]: break  #otherwise do the next colour
-            xoffset = w*VUFrame.TEXTGAP + maxw * limit[0]
-            wh[0]   = maxw * (vu - limit[0])
-
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(size, 1.0), Valign='top', Halign=channel)
+        self += VUMeterBackground(self.coords, platform, display, channel)
+        self += VUMeterNeedle(self.coords, platform, display, channel)
+        self.check()
 
 class VUFrame(Frame):
     """
@@ -373,6 +391,14 @@ class MainScreen(Frame):
         self += SpectrumFrame(self.coords, platform, display, 'left', 0.3 )
         self += dbVolumeSourceFrame(display.boundary, platform, display, 0.4, 'centre')
         self += SpectrumFrame(self.coords, platform, display, 'right', 0.3 )
+
+class MetersScreen(Frame):
+    """ Vol/source in centre - VU meters left and right """
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += VUMeterFrame(self.coords, platform, display, 'left', 0.4 )
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'centre')
+        self += VUMeterFrame(self.coords, platform, display, 'right', 0.4 )
 
 class SpectrumScreen(Frame):
     """ Volume/Source on left - Spectrum on left - one channel """

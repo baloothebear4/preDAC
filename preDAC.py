@@ -132,7 +132,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'main'
+        self.baseScreen     = 'VUMeters'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -142,6 +142,7 @@ class Controller:
                            'volChange'    : { 'class' : VolChangeScreen, 'base' : 'no', 'title' : 'Incidental volume change indicator' },
                            'fullSpectrum' : { 'class' : FullSpectrumScreen, 'base' : 'yes', 'title' : '1/6 Octave Spectrum Analyser' },
                            'stereoSpectrum' :{'class' : StereoSpectrumScreen, 'base' : 'yes', 'title' : 'Stereo Spectrum Analyser' },
+                           'VUMeters'     : { 'class' : MetersScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
                            'shutdown'     : { 'class' : ShutdownScreen, 'base' : 'no', 'title' : 'end' },
                            'sourceVol'    : { 'class' : SourceVolScreen,'base' : 'yes', 'title' : 'Source Icons & Volume Dial' },
                            'screenTitle'  : { 'class' : ScreenTitle, 'base' : 'no', 'title' : 'Displays screen titles for menu' },
