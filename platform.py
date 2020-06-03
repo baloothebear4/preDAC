@@ -38,9 +38,6 @@ class Source:
                     'phono'     : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"]  }
 
     def __init__(self):
-        # self._activeSource      =
-        # self.setSource         = setSource
-        # self.sourceSequence    = Sequence            # a dictionary mapping the sources to logical values
         self.sourcesEnabled    = Source.IconFiles.keys()       # List of available (can change as DAC settings are altered)
         self.currentIcon       = 0   # icon position in the list of icons for the current source
         self.screenName        = "description of current screen"
@@ -377,8 +374,6 @@ class VolumeBoard(PCF8574, Volume):
     DEFAULT_VOL  = 80
 
     """ Map of the volume relay step to the i2c pin """
-    # RELAYMAP     = ( 3, 2, 1, 7, 6, 5, 4)
-    # RELAYMAP     = ( 7, 1, 2, 3, 6, 5, 4)
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
 
     def __init__(self, events):
@@ -473,15 +468,8 @@ class VolumeBoard(PCF8574, Volume):
 
 class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioProcessor, KeyEvent):
     """ this is the HW abstraction layer and includes the device handlers and data model """
-    def __init__(self, events):
-        """ setup all the HW drivers and interfaces """
-        ControlBoard.__init__(self, events)
-        AudioBoard.__init__(self, events)
-        VolumeBoard.__init__(self, events)
-        # RemoteController.__init__(self, events)
-        AudioProcessor.__init__(self, events)
-        KeyEvent.__init__(self, events)
-
+    def __init__(self, events, test_mode=False):
+        """ start the displays """
         try:
             self.internaldisplay   = internalOLED()
         except:
@@ -494,7 +482,39 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             self.frontdisplay = None
             print("Platform.__init__> failed to start front display")
 
-        print("Platform.__init__>\n", self)
+        """ setup all the HW drivers and interfaces """
+        if not test_mode:
+            hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent)  #RemoteController
+            for hw in hwifs:
+                try:
+                    hw.__init__(self, events)
+                except Exception as e:
+                    print("Platform.__init__> failed to start %s > %s" % (hw.__name__, e))
+            print("Platform.__init__>\n", self)
+
+        else:
+            self.activeSource       = ListNext(['dac','cd','tape'],'dac')
+            self.screenName         = "description of current screen"
+            # self.activeSourceText   = 'DAC'
+            # self.volume_raw        = 100
+            # self.volume_db          = -14.5
+            data                    = [0.5]*50
+            import numpy as np
+            data_r                  = np.arange(2048)
+            data_l                  = np.arange(50)
+            self.vu                 = {'left': 0.5, 'right':0.6}
+            self.peak               = {'left': 0.8, 'right':0.9}
+            self.spectrum           = {'left': data, 'right':data}
+            self.bins               = {'left': data_l, 'right':data_r}
+            self.State  = {  'source'       : AudioBoard.DEFAULT_SOURCE,
+                             'phonesdetect' : AudioBoard.OFF,
+                             'mute'         : AudioBoard.OFF,
+                             'gain'         : AudioBoard.OFF }
+            Source.__init__(self)
+            Volume.__init__(self)
+            print("Platform.__init__> in test mode")
+
+
 
     def __str__(self):
         text = " >> Displays:"
