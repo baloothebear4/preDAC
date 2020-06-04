@@ -379,11 +379,11 @@ class Controller:
                 screen = self.screens[self.activeScreen]
 
                 if self.test_mode:
-                    # self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
-                    self.platform.internaldisplay.draw_status(self.platform.volume_db, \
-                        self.platform.activeSourceText, \
-                        self.platform.chid, \
-                        self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+                    self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
+                    # self.platform.internaldisplay.draw_status(self.platform.volume_db, \
+                    #     self.platform.activeSourceText, \
+                    #     self.platform.chid, \
+                    #     self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
 
 
                 else:
@@ -408,7 +408,7 @@ def cb( e):
 
 if __name__ == "__main__":
     try:
-        logic = Controller(test_mode=False)
+        logic = Controller(test_mode=True)
         logic.run()
 
     except KeyboardInterrupt:
