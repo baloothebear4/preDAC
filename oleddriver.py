@@ -16,9 +16,9 @@ import time, sys, os, math
 
 import datetime
 from PIL import ImageFont, Image, ImageOps
-from luma.core.interface.serial import i2c
+from luma.core.interface.serial import i2c, spi
 from luma.core.render import canvas
-from luma.oled.device import ssd1306
+from luma.oled.device import ssd1306, ssd1322
 from luma.core.sprite_system import framerate_regulator
 
 def make_font(name, size):
@@ -266,7 +266,7 @@ def getDevice(actual_args=None):
 from luma.core import cmdline, error
 class frontOLED(OLEDdriver):
     """ driver for the front 256,64 spi display """
-    SPIPORT    = 1
+    SPIPORT    = 0
     HEIGHT     = 64
     WIDTH      = 256
     FPS        = 40

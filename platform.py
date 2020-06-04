@@ -480,15 +480,15 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
         """ start the displays """
         try:
             self.internaldisplay   = internalOLED()
-        except:
+        except Exception as e:
             self.internaldisplay   = None
-            print("Platform.__init__> failed to start internal display")
+            print("Platform.__init__> failed to start internal display ", e)
 
         try:
             self.frontdisplay      = frontOLED()
-        except:
+        except Exception as e:
             self.frontdisplay = None
-            print("Platform.__init__> failed to start front display")
+            print("Platform.__init__> failed to start front display ", e)
 
         """ setup all the HW drivers and interfaces """
         if not test_mode:
