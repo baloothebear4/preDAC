@@ -166,6 +166,7 @@ class VUMeterBackground(Frame):
     def draw(self, basis):
         self.display.drawFrameTopCentredText(basis, self, "-40 -10 0 3 6", self.font)
         self.display.drawFrameCentredCircle(basis, self, self.h*VUMeterBackground.CENTRE, -self.h*VUMeterBackground.PIVOT, 'grey' ) #
+        # self.display.drawFrameCentreArc(basis, self, 'red', self.wh, -self.h*VUMeterBackground.PIVOT, self.h*(1+VUMeterBackground.PIVOT))
         self.display.drawFrameCentrerect(basis, self, 'red', (self.w*VUMeterBackground.LINEW, 0), self.h*VUMeterBackground.LINEH  )
         # self.display.outline( basis, self, outline="red")
 
@@ -210,7 +211,7 @@ class VUFrame(Frame):
     """
     BARHEIGHT    = 0.6  # % of frame height
     TEXTGAP      = 1.5   # % of text width left bar starts
-    PEAKBARWIDTH = 1  # pixels
+    PEAKBARWIDTH = 0  # pixels
 
     def __init__(self, bounds, platform, display, channel, limits):  # size is a scaling factor
         self.limits  = limits

@@ -111,13 +111,13 @@ def frametest(display):
     # a = f(geo.coords, p, d, 1.0 )
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    f = VUMeterFrame
-    a = f(geo.coords, p, d, 'left', limits )
+    # f = VUMeterFrame
+    # a = f(geo.coords, p, d, 0.5, 'left' )
 
     # a = testScreen1(p, d)
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    # a = StereoSpectrumScreen(p, d)
+    a = MetersScreen(p, d)
     d.draw(a)
 
     print( "Drawn: %s" % ( a) )
@@ -272,7 +272,7 @@ def geometrytest():
 if __name__ == "__main__":
     try:
         geometrytest()
-        frametest('front')
+        frametest('int')
         # screentest('front')
     except KeyboardInterrupt:
         pass

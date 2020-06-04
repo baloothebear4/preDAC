@@ -307,6 +307,7 @@ class Controller:
             self.ScreenSave('cancel_screensave')
 
         elif e == 'capture':
+            if self.audioready: print("Controller.AudioAction> sample buffer underrun, dump old data ")
             self.platform.process()
             self.audioready = True
 
@@ -372,17 +373,26 @@ class Controller:
             """ return the current screen object to run """
             Timer.checkTimers()
             self.platform.checkKeys()
+            # self.checkRemoteKeyPress()        # should become event driven
 
             if self.audioready:
                 screen = self.screens[self.activeScreen]
 
-                # self.checkRemoteKeyPress()        # should become event driven
                 if self.test_mode:
-                    self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
+                    # self.platform.internaldisplay.draw(screen)     # this will just be the diagnostics in time
+                    self.platform.internaldisplay.draw_status(self.platform.volume_db, \
+                        self.platform.activeSourceText, \
+                        self.platform.chid, \
+                        self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+
+
                 else:
                     self.platform.frontdisplay.draw(screen)
-                    self.platform.internaldisplay.draw_status(self.platform.volume, self.platform.activeSourceText, \
-                           self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+                    self.platform.internaldisplay.draw_status(self.platform.volume_db, \
+                        self.platform.activeSourceText, \
+                        self.platform.chid, \
+                        self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+
                 self.audioready = False
 
                 # print("run> waited for audio: waited", 1000*(time.time()-t))
@@ -398,7 +408,7 @@ def cb( e):
 
 if __name__ == "__main__":
     try:
-        logic = Controller(test_mode=True)
+        logic = Controller(test_mode=False)
         logic.run()
 
     except KeyboardInterrupt:

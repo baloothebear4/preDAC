@@ -171,6 +171,15 @@ class OLEDdriver(canvas):
         coords = ( geo.centre[0], yoffset,geo.centre[0]+xy[0], yoffset+xy[1] )
         basis.line( self.trabcd(coords), fill=colour)
 
+    def drawFrameCentreArc(self, basis, geo, fill, wh, yoffset, len):
+        """ yoffset is how far from the bottom side to draw the rect
+            size is set to the given height"""
+        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        coords = (geo.centre[0]-wh[0]/2, geo.y0+yoffset, geo.centre[0]+wh[0]/2, geo.y0+wh[1]+yoffset)
+        ab     = self.anglerange(geo.w, len)
+        basis.arc(self.trabcd(coords), start=ab[0]+180, end=ab[1]+180, fill=fill)
+
     def posn(self, angle, length):
         dx = int(math.cos(math.radians(angle)) * length)
         dy = int(math.sin(math.radians(angle)) * length)
@@ -186,7 +195,7 @@ class OLEDdriver(canvas):
         angle_max = 180-angle_min
         return (angle_min, angle_max)
 
-    def draw_status(self, vol, source, mute, gain, headphonedetect):
+    def draw_status(self, vol, source, id, mute, gain, headphonedetect):
         """ simple dignostic to see the current source channel and volume setting """
 
         states = ""
@@ -197,8 +206,8 @@ class OLEDdriver(canvas):
         self.calcDisplaytime()
         with self.regulator:
             with canvas(self.device) as draw:
-                draw.text((0,0), text='Volume %2.1fdB' % (vol/2.0), fill="white", font=self.font)
-                draw.text((0,11),text='Channel %s' % source, fill="white",font=self.font)
+                draw.text((0,0), text='Volume %2.1fdB' % vol, fill="white", font=self.font)
+                draw.text((0,11),text='Channel %d  %s' % (id, source), fill="white",font=self.font)
                 draw.text((0,22),text=states, fill="white", font=self.font)
 
         self.calcDisplaytime(False)
@@ -265,11 +274,11 @@ class frontOLED(OLEDdriver):
 
     def __init__(self):
 
-        OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
+        # OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
         print("***check out the non command line version")
 
-        # driver = spi(port=frontOLED.SPIPORT)
-        # OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
+        driver = spi(port=frontOLED.SPIPORT)
+        OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
         # #
         self.testdevice()
         print("frontOLED.__init__> initialised")

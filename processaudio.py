@@ -22,7 +22,7 @@ CHANNELS        = 2
 # INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
 INFORMAT        = pyaudio.paInt16
 RATE            = 44100
-FRAMESIZE       = 2048
+FRAMESIZE       = int(1024*2.0)
 duration        = 10
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE
@@ -31,7 +31,7 @@ SILENCESAMPLES  = 5 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
 RMSNOISEFLOOR   = -66  #dB
-SILENCETHRESOLD = 0.05
+SILENCETHRESOLD = 0.06
 
 WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
@@ -52,8 +52,11 @@ class WindowAve:
         del self.window[-1]
         return sum(self.window)/len(self.window)
 
-    def reset(self):
-        self.window = [1.0]*int(self.size)
+    def reset(self,type):
+        if type == 'silence':
+            self.window = [0.0]*int(self.size)
+        else:
+            self.window = [1.0]*int(self.size)
 
 class AudioData():
     def __init__(self):
@@ -65,9 +68,9 @@ class AudioData():
         self.spectrum = {'left': data, 'right':data}
         self.bins     = {'left': data, 'right':data}
         self.samples  = {'left': data_s, 'right':data_s}
-        self.monosamples    = data
-        self.signalDetected = False
-        self.peakwindow     = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
+        self.monosamples     = data
+        self.signal_detected = False
+        self.peakwindow      = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
 
     def filter(self, signal, fc):
         return signal
@@ -119,7 +122,7 @@ class AudioProcessor(AudioData):
         self.samples['left']  = data[0::2]
         self.samples['right'] = data[1::2]
         self.events.Audio('capture')
-        self.calcReadtime(False)
+        # self.calcReadtime(False)
         return (in_data, pyaudio.paContinue)
 
     def captureAudio(self):
@@ -167,6 +170,7 @@ class AudioProcessor(AudioData):
         self.vu['left'], self.peak['left']  = self.VU('left')
         self.vu['right'], self.peak['right'] = self.VU('right')
         self.detectSilence()
+        self.calcReadtime(False)
                 # other functions to calculate DC offset, noise level, silence, RMS quiet etc can go here
 
     def detectSilence(self):
@@ -174,13 +178,15 @@ class AudioProcessor(AudioData):
         signal_level = self.vu['left']
         ave_level    = self.silence.average(signal_level)
 
-        if self.signalDetected and ave_level < SILENCETHRESOLD:
-            self.signalDetected = False
-            print("ProcessAudio.detectSilence> at", ave_level)
-            self.silence.reset()
+        if self.signal_detected and ave_level < SILENCETHRESOLD:
+            print("ProcessAudio.detectSilence> Silence at", ave_level, signal_level)
+            self.signal_detected = False
+            self.silence.reset('silence')
             self.events.Audio('silence_detected')
-        elif not self.signalDetected and signal_level >= SILENCETHRESOLD:
-            self.signalDetected = True
+        elif not self.signal_detected and signal_level >= SILENCETHRESOLD:
+            print("ProcessAudio.detectSilence> Signal at", ave_level, signal_level)
+            self.signal_detected = True
+            self.silence.reset('signal')
             self.events.Audio('signal_detected')
         #else: no change to the silence detect state
 
@@ -227,13 +233,13 @@ class AudioProcessor(AudioData):
 
     def VU(self,channel):
         """ normalise to 0-1 """
-        PeakMax = 20*math.log(2*2^16)  #about 196
+        PeakMax = 10*math.log(2*2^16)  #about 196
         VUmax   = PeakMax/math.sqrt(2)
-        PeakOff = 109
-        VUOff   = 127
+        PeakOff = 50
+        VUOff   = 63
 
-        peak = 20*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
-        vu   = 20*math.log( self.rms(self.samples[channel]), 10)
+        peak = 10*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
+        vu   = 10*math.log( self.rmsPower(self.samples[channel]), 10)
         # print("vu ", vu, "peak", peak)
         peakave = self.peakwindow[channel].average(peak)
 
@@ -294,7 +300,7 @@ class AudioProcessor(AudioData):
             while bincount*BINBANDWIDTH <= band:
                 bincount    += 1
 
-            level = 20*np.log10((bins[startbin:bincount].mean()))
+            level = 10*np.log10((bins[startbin:bincount].mean()))
             spectrumBands.append( self.normalise(level) )
             startbin = bincount
 
@@ -343,7 +349,7 @@ class AudioProcessor(AudioData):
         evaluate how many bits of data are being used by the ADC
         """
         text = ''
-        r    = self.rms(data)
+        r    = self.rmsPower(data)
         text = "%f" % r
         maxS = np.max(r)
         minS = np.min(r)
@@ -363,11 +369,11 @@ class AudioProcessor(AudioData):
         print("dynamicRange> Dynamic range = %2.0f dB" % dr)
 
     """ calculate the RMS power (NB: sqrt is not required) """
-    def rms(self, y):
+    def rmsPower(self, y):
         return np.abs(np.mean(np.square(y)))
 
     def processstatus(self):
-        text  = "Process audio> signal det %s" % self.signalDetected
+        text  = "Process audio> signal det %s" % self.signal_detected
         text += "\n L%10f-^%10f^%10f\t%10f R"% (self.vu['left'], self.peak['left'], self.peak['right'], self.vu['right'])
         text += "\n Peak Spectrum L:%f, R:%f" % (max(self.bins['left']), max(self.bins['right']) )
         return text

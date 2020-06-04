@@ -152,7 +152,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         print("AudioBoard.__init__ > ready", self.audiostatus())
 
     @property
-    def muted(self):
+    def muteState(self):
         return self.State['mute']
 
     @property
@@ -169,6 +169,10 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
             return AudioBoard.GAINONDB
         else:
             return AudioBoard.GAINOFFDB
+
+    @property
+    def chid(self):
+        return AudioBoard.audioBoardMap[self.activeSource.curr][AudioBoard.POS]
 
     def chLogic(self):
         logic = {}
@@ -448,6 +452,10 @@ class VolumeBoard(PCF8574, Volume):
             2. need to go through a pattern of turn on's, then turn off's to minimise clicks
         """
         """ volume to relays: map integer into bits, map bits to i2c2 ports """
+        if volume > VolumeBoard.MAX_VOLUME or volume < VolumeBoard.MIN_VOLUME:
+            print("VolumeBoard.setVolume> error volume demand out of range", volume)
+            return
+
         relays = [False] * VolumeBoard.VOLUMESTEPS
         mask   = 0x01
         for i in range(VolumeBoard.VOLUMESTEPS):
