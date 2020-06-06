@@ -111,8 +111,11 @@ class AudioProcessor(AudioData):
         print("AudioProcessor.__init__> ready and reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
 
     def start_capture(self):
-        self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE, stream_callback=self.callback)
-        self.stream.start_stream()
+        try:
+            self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE, stream_callback=self.callback)
+            self.stream.start_stream()
+        except:
+            print("AudioProcessor.capture> ADC/DAC not available")
 
     def callback(self, in_data, frame_count, time_info, status):
 

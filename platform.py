@@ -15,11 +15,12 @@
 
 from oleddriver   import internalOLED, frontOLED
 from processaudio import AudioProcessor
-from keyevents    import KeyEvent
+from keyevents    import KeyEvent   # used for testing without all HW attached
+from rotenc       import RotaryEncoder
+from pcf8574      import PCF8574
 
-from rotenc import RotaryEncoder
-from pcf8574 import PCF8574
-
+from events       import Events
+from threading    import Thread
 import RPi.GPIO as GPIO
 import os, time, socket
 
@@ -285,7 +286,7 @@ class ControlBoard:
 
 
 
-class RemoteController:
+class RemoteController(Thread):
     """
         The IR receiver device is managed by the system lirc Module
         this is configured to use a particular remote control.
@@ -298,50 +299,66 @@ class RemoteController:
         self.events = events
         """ set up the button shutdown """
         SOCKPATH = "/var/run/lirc/lircd"
-
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        print(('starting up IR receiver on socket %s' % SOCKPATH))
+        print('starting up IR receiver on socket %s, %s' % (SOCKPATH, events.RemotePress))
         self.sock.connect(SOCKPATH)
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
+
+        """ as key events block, run as a separate thread """
+        Thread.__init__(self)
+        self.start()
 
         print("RemoteController._init__ > ready")
+
+    def run(self):
+        self.checkRemoteKeyPress()
+        print("RemoteController.run > waiting for Remote Key presses")
 
     def checkRemoteKeyPress(self):
         '''Get the next key pressed. raise events accordingly
         '''
         try:
             while True:
-                data = self.sock.recv(128)
-                #print("Data: " + data)
-                data = data.strip()
-                if data:
-                    break
+                print ("checkRemoteKeyPress> wait for remote key press ")
+                data = self.sock.recv(128)    # blocked wait for keypress
+                data = data.strip().decode('UTF-8')
+                # if data:
+                #     break
 
-            words = data.split()
-            # print "checkRemoteKeyPress ", words[2], words[1]
-            '''  using the sequence number removes all key re-trigger '''
+                words = data.split()
+                # print ("checkRemoteKeyPress ", words[2], words[1])
+                '''  using the sequence number removes all key re-trigger '''
 
-            if words[2]   == "KEY_MUTE" and words[1] == "00":
-                self.events.RemotePress('mute')
-            elif words[2] == "KEY_VOLUMEUP":
-                self.events.RemotePress('volume_up')
-            elif words[2] == "KEY_VOLUMEDOWN":
-                self.events.RemotePress('volume_down')
-            elif words[2] == "KEY_POWER" and words[1] == "00":
-                self.events.Platform('shutdown')
-            elif words[2] == "KEY_LEFT" and words[1] == "00":
-                self.events.CtrlTurn('anticlockwise')
-            elif words[2] == "KEY_RIGHT" and words[1] == "00":
-                self.events.CtrlTurn('clockwise')
-            elif words[2] == "KEY_STOP" and words[1] == "00":
-                self.events.CtrlPress('down')
+                if words[2]   == "KEY_MUTE" and words[1] == "00":
+                    self.events.RemotePress('mute')
+                elif words[2] == "KEY_VOLUMEUP":
+                    self.events.RemotePress('volume_up')
+                elif words[2] == "KEY_VOLUMEDOWN":
+                    self.events.RemotePress('volume_down')
+                elif words[2] == "KEY_POWER" and words[1] == "00":
+                    self.events.RemotePress('shutdown')
+                elif words[2] == "KEY_LEFT" and words[1] == "00":
+                    self.events.RemotePress('back')
+                elif words[2] == "KEY_RIGHT" and words[1] == "00":
+                    self.events.RemotePress('forward')
+                elif words[2] == "KEY_STOP" and words[1] == "00":
+                    self.events.RemotePress('stop')
+                elif words[2] == "KEY_PAUSE" and words[1] == "00":
+                    print("RemoteController.checkRemoteKeyPress> pause key pressed, no linked event")
+                elif words[2] == "KEY_PLAY" and words[1] == "00":
+                    print("RemoteController.checkRemoteKeyPress> play key pressed, no linked event")
+            # else:
+            #     print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
 
-            #return words[2], words[1]
-        except:
+            # return words[2], words[1]
+        except Exception as e:
+            print("RemoteController.checkRemoteKeyPress> exception", e)
             #print "no key"
-            #return "no", "key"
-            pass
+            # return "no", "key"
+            # pass
 
+    def RemoteAction(self, e):
+        print('RemoteController> Remote Keypress: event %s' % e)
 
 
 """ Data model for all volume related items """
@@ -476,7 +493,7 @@ class VolumeBoard(PCF8574, Volume):
 
 class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioProcessor, KeyEvent):
     """ this is the HW abstraction layer and includes the device handlers and data model """
-    def __init__(self, events, test_mode=False):
+    def __init__(self, events):
         """ start the displays """
         try:
             self.internaldisplay   = internalOLED()
@@ -491,13 +508,14 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             print("Platform.__init__> failed to start front display ", e)
 
         """ setup all the HW drivers and interfaces """
-        if not test_mode:
+        if self.internaldisplay is not None:
             hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent)  #RemoteController
             for hw in hwifs:
                 try:
                     hw.__init__(self, events)
                 except Exception as e:
                     print("Platform.__init__> failed to start %s > %s" % (hw.__name__, e))
+            self.nohw = False
             print("Platform.__init__>\n", self)
 
         else:
@@ -518,8 +536,10 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
                              'phonesdetect' : AudioBoard.OFF,
                              'mute'         : AudioBoard.OFF,
                              'gain'         : AudioBoard.OFF }
+            self.nohw               = True
             Source.__init__(self)
             Volume.__init__(self)
+            RemoteController.__init__(self, events)
             print("Platform.__init__> in test mode")
 
 
@@ -583,25 +603,37 @@ class ListNext:
 """
     test code for remote control
 """
+def RemoteAction(e):
+    print('Remote Keypress: event %s' % e)
 
-# if __name__ == '__main__':
-#     from events import Events
-#     e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolKnob', 'VolPress', 'Pause', 'Start', 'Stop'))
-#
-#     """ ir controller test code """
-#     irRemote = RemoteController(e)
-#
-#     while True:
-#         keyname, updown = irRemote.checkRemoteKeyPress()
-#         if keyname != "no":
-#             print('%s (%s)' % (keyname, updown))
-#
-#     """ Volume knob test code """
-#     v = VolumeBoard()
-#
-#     while True:
-#         v.detectVolChange()
-#         time.sleep(0.1)
+
+if __name__ == '__main__':
+
+    e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
+
+
+    try:
+        """ ir controller test code """
+        irRemote = RemoteController(e)
+        e.RemotePress  += irRemote.RemoteAction    # when the remote controller is pressed
+
+        e.RemotePress('test')
+
+        while True:
+            # keyname, updown = irRemote.checkRemoteKeyPress()
+            # if keyname != "no":
+            #     print('%s (%s)' % (keyname, updown))
+            time.sleep(0.01)
+
+    except KeyboardInterrupt:
+        pass
+
+    # """ Volume knob test code """
+    # v = VolumeBoard()
+    #
+    # while True:
+    #     v.detectVolChange()
+    #     time.sleep(0.1)
 
 
 """ test code for ListNext object """
@@ -619,5 +651,5 @@ class ListNext:
 #     a.next
 #     a.next
 #     print (" curr %s next %s prev %s " % (a.curr, a.next, a.prev))
-if __name__ == '__main__':
-    a = AudioBoard()
+# if __name__ == '__main__':
+#     a = AudioBoard()

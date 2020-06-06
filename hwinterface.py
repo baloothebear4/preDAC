@@ -17,6 +17,7 @@
 
 from rotenc import RotaryEncoder
 from pcf8574 import PCF8574
+from events import Events
 
 import RPi.GPIO as GPIO
 import os, time, socket
@@ -200,7 +201,7 @@ class RemoteController:
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         print(('starting up IR receiver on socket %s' % SOCKPATH))
         self.sock.connect(SOCKPATH)
-        self.sock.setblocking(False)
+        self.sock.setblocking(True)
 
         print("RemoteController._init__ > ready")
 
@@ -216,7 +217,8 @@ class RemoteController:
                     break
 
             words = data.split()
-            # print "checkRemoteKeyPress ", words[2], words[1]
+            print ("checkRemoteKeyPress ", words[2], words[1])
+            return words[2], words[1]
             '''  using the sequence number removes all key re-trigger '''
 
             if words[2]   == "KEY_MUTE" and words[1] == "00":
@@ -234,11 +236,10 @@ class RemoteController:
             elif words[2] == "KEY_STOP" and words[1] == "00":
                 self.events.CtrlPress('down')
 
-            #return words[2], words[1]
+
         except:
-            #print "no key"
-            #return "no", "key"
-            pass
+            return 'no','happened'
+            # this will cause "Error 11 - resource unavailable - if nothing pressed"
 
 class VolumeBoard(PCF8574):
     i2c2_port    = 1
@@ -360,7 +361,7 @@ class HWInterface(VolumeBoard, AudioBoard, ControlBoard, RemoteController):  #su
     test code for remote control
 """
 if __name__ == '__main__':
-    from events import Events
+
     e = Events(( 'Shutdown', 'CtrlPress', 'CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
 
     """ ir controller test code """
@@ -368,8 +369,8 @@ if __name__ == '__main__':
 
     while True:
         keyname, updown = irRemote.checkRemoteKeyPress()
-        if keyname != "no":
-            print('%s (%s)' % (keyname, updown))
+        # if keyname != "no":
+        #     print('%s (%s)' % (keyname, updown))
 
 
     """ Volume knob test code """

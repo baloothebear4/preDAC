@@ -207,17 +207,27 @@ class Controller:
             print("Controller.setVolumeChange> unknown event", e)
 
     def RemoteAction(self, e='volume_up'):
+        print("Controller.RemoteAction: ",e)
         if e == 'volume_up':
-            # print "RemotePress: Calling volume up"
             self.platform.volumeUp()
 
         elif e =='volume_down':
-            # print "RemotePress: calling volume down"
             self.platform.volumeDown()
 
         elif e =='mute':
-            # print "RemotePress: toggle mute"
             self.platform.toggleMute()
+
+        if e == 'shutdown':
+            self.PlatformAction('shutdown')
+
+        elif e =='forward':
+            self.CtrlTurn('clockwise')
+
+        elif e =='back':
+            self.CtrlTurn('anticlockwise')
+
+        elif e =='stop':
+            self.CtrlPress('down')
 
         else:
             print("Controller.RemotePress> unknown event", e)
@@ -373,7 +383,7 @@ class Controller:
             """ return the current screen object to run """
             Timer.checkTimers()
             self.platform.checkKeys()
-            # self.checkRemoteKeyPress()        # should become event driven
+            if self.platform.nohw: self.audioready = True
 
             if self.audioready:
                 screen = self.screens[self.activeScreen]
@@ -388,10 +398,11 @@ class Controller:
 
                 else:
                     self.platform.frontdisplay.draw(screen)
-                    self.platform.internaldisplay.draw_status(self.platform.volume_db, \
-                        self.platform.activeSourceText, \
-                        self.platform.chid, \
-                        self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+                    if self.platform.internaldisplay is not None:
+                        self.platform.internaldisplay.draw_status(self.platform.volume_db, \
+                            self.platform.activeSourceText, \
+                            self.platform.chid, \
+                            self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
 
                 self.audioready = False
 
@@ -408,7 +419,7 @@ def cb( e):
 
 if __name__ == "__main__":
     try:
-        logic = Controller(test_mode=True)
+        logic = Controller(test_mode=False)
         logic.run()
 
     except KeyboardInterrupt:
