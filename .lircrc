@@ -1,0 +1,43 @@
+
+# Please make this file available to others
+# by sending it to <lirc@bartelmus.de>
+#
+# this config file was automatically generated
+# using lirc-0.9.0-pre1(default) on Sun Jun  2 11:59:43 2019
+#
+# contributed by 
+#
+# brand:                       ARCAM
+# model no. of remote control: CR107
+# devices being controlled by this remote:
+#
+
+begin remote
+
+  name  arcam
+  bits           13
+  flags RC5|CONST_LENGTH
+  eps            30
+  aeps          100
+
+  one           905   871
+  zero          905   871
+  plead         908
+  gap          113838
+  toggle_bit_mask 0x800
+
+      begin codes
+          KEY_VOLUMEUP             0x1410
+          KEY_VOLUMEDOWN           0x1411
+          KEY_MUTE                 0x140D
+          KEY_POWER                0x16CC
+          KEY_LEFT                 0x16E1
+          KEY_RIGHT                0x16E0
+          KEY_PAUSE                0x16F0
+          KEY_STOP                 0x16F6
+          KEY_PLAY                 0x16F5
+      end codes
+
+end remote
+
+

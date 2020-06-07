@@ -18,13 +18,6 @@ import time
 from platform import Platform, ListNext
 from frames import *
 
-# # logging
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     format='%(asctime)-15s - %(message)s'
-# )
-# # ignore PIL debug messages
-# logging.getLogger("PIL").setLevel(logging.ERROR)
 
 class Timer:
     """
@@ -142,7 +135,7 @@ class Controller:
                            'volChange'    : { 'class' : VolChangeScreen, 'base' : 'no', 'title' : 'Incidental volume change indicator' },
                            'fullSpectrum' : { 'class' : FullSpectrumScreen, 'base' : 'yes', 'title' : '1/6 Octave Spectrum Analyser' },
                            'stereoSpectrum' :{'class' : StereoSpectrumScreen, 'base' : 'yes', 'title' : 'Stereo Spectrum Analyser' },
-                           'VUMeters'     : { 'class' : MetersScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
+                           'VUMeters'     : { 'class' : MetersAScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
                            'shutdown'     : { 'class' : ShutdownScreen, 'base' : 'no', 'title' : 'end' },
                            'sourceVol'    : { 'class' : SourceVolScreen,'base' : 'yes', 'title' : 'Source Icons & Volume Dial' },
                            'screenTitle'  : { 'class' : ScreenTitle, 'base' : 'no', 'title' : 'Displays screen titles for menu' },
@@ -173,7 +166,11 @@ class Controller:
         self.welcomeTimer.start()
         self.setScreen('start')
         self.audioready = False
-        self.platform.start_capture()
+        self.platform.start()
+
+    def stopAction(self):
+        self.platform.stop()
+
 
     def checkScreen(self, basis):
         """ return the current screen object to run """
@@ -221,13 +218,13 @@ class Controller:
             self.PlatformAction('shutdown')
 
         elif e =='forward':
-            self.CtrlTurn('clockwise')
+            self.events.CtrlTurn('clockwise')
 
         elif e =='back':
-            self.CtrlTurn('anticlockwise')
+            self.events.CtrlTurn('anticlockwise')
 
         elif e =='stop':
-            self.CtrlPress('down')
+            self.events.CtrlPress('down')
 
         else:
             print("Controller.RemotePress> unknown event", e)
@@ -423,4 +420,4 @@ if __name__ == "__main__":
         logic.run()
 
     except KeyboardInterrupt:
-        pass
+        logic.stopAction()

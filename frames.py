@@ -143,6 +143,34 @@ class SourceIconFrame(Frame):
         # print ("SourceIconFrame.draw>", self.platform.activeSource.curr, self.platform.currentIcon)
         self.display.drawFrameCentredImage( basis, self, self.icons[self.platform.activeSource.curr][self.platform.currentIcon])
 
+class VUMeterABackground(Frame):
+    """
+        Background for the VU Meter comprising
+        - a horiziontal line
+        - calibrated dB level markers
+        - a needle base
+    """
+    FONTH = 0.15  # as a percentage of the overall frame height
+    PIVOT = 0.6  # % of the frame height the pivot is below
+    CENTRE= 0.2  # % of the frame height the size of the Centre piece
+    ARCH  = FONTH+0.1  # % of the frame width the size of the arc line
+    MARKS = {'-40':0.1, '-20':0.3, '-3':0.5, '0':0.63, '+3':0.77, '+6':0.9}
+
+
+    def __init__(self, bounds, platform, display, channel):  # size is a horizontal scaling factor
+        self.channel = channel
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 1.0), Valign='top', Halign=channel)
+        self.font   = make_font("arial.ttf", self.h*VUMeterABackground.FONTH)
+
+    def draw(self, basis):
+        # self.display.drawFrameTopCentredText(basis, self, "-40 -10 0 3 6", self.font)
+        marklen = self.h*(1+VUMeterABackground.PIVOT)
+        for mark, val in VUMeterABackground.MARKS.items():
+            self.display.drawFrameCentredVectorText(basis, self, marklen , val, -self.h*VUMeterABackground.PIVOT, 'white', mark, self.font)
+
+        self.display.drawFrameCentreArc(basis, self, 'white', self.wh, -self.h*VUMeterABackground.ARCH, self.h*(1+VUMeterABackground.PIVOT))
+
 
 class VUMeterBackground(Frame):
     """
@@ -184,7 +212,7 @@ class VUMeterNeedle(Frame):
         Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 1.0), Valign='top', Halign=channel)
 
     def draw(self, basis):
-        vu        = self.platform.vu[self.channel]
+        vu        = self.platform.vu[self.channel]*0.85 + 0.05  #scale to limit range
         needlelen = self.h*(1+VUMeterBackground.PIVOT)
         self.display.drawFrameCentredVector(basis, self, needlelen , vu, -self.h*VUMeterBackground.PIVOT, 'white')
 
@@ -200,6 +228,21 @@ class VUMeterFrame(Frame):
 
         Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(size, 1.0), Valign='top', Halign=channel)
         self += VUMeterBackground(self.coords, platform, display, channel)
+        self += VUMeterNeedle(self.coords, platform, display, channel)
+        self.check()
+
+class VUMeterAFrame(Frame):
+    """
+        Composite frame of a meter background and a moving needle
+        - side is str 'left' or 'right'
+        - limits is an array of points where colour changes occur: [level (%), colour] eg [[0, 'grey'], [0.8,'red'], [0.9],'purple']
+    """
+
+    def __init__(self, bounds, platform, display, channel, size):  # size is a scaling factor
+        self.channel = channel
+
+        Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(size, 1.0), Valign='top', Halign=channel)
+        self += VUMeterABackground(self.coords, platform, display, channel)
         self += VUMeterNeedle(self.coords, platform, display, channel)
         self.check()
 
@@ -400,6 +443,14 @@ class MetersScreen(Frame):
         self += VUMeterFrame(self.coords, platform, display, 'left', 0.4 )
         self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'centre')
         self += VUMeterFrame(self.coords, platform, display, 'right', 0.4 )
+
+class MetersAScreen(Frame):
+    """ Vol/source in centre - VU meters left and right """
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += VUMeterAFrame(self.coords, platform, display, 'left', 0.4 )
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'centre')
+        self += VUMeterAFrame(self.coords, platform, display, 'right', 0.4 )
 
 class SpectrumScreen(Frame):
     """ Volume/Source on left - Spectrum on left - one channel """

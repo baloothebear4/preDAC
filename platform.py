@@ -305,8 +305,9 @@ class RemoteController(Thread):
         self.sock.setblocking(True)
 
         """ as key events block, run as a separate thread """
+        self.running = True
         Thread.__init__(self)
-        self.start()
+        # self.start()
 
         print("RemoteController._init__ > ready")
 
@@ -314,16 +315,17 @@ class RemoteController(Thread):
         self.checkRemoteKeyPress()
         print("RemoteController.run > waiting for Remote Key presses")
 
+    def remotestop(self):
+        self.running = False
+
     def checkRemoteKeyPress(self):
         '''Get the next key pressed. raise events accordingly
         '''
-        try:
-            while True:
+        while self.running:
+            try:
                 print ("checkRemoteKeyPress> wait for remote key press ")
                 data = self.sock.recv(128)    # blocked wait for keypress
                 data = data.strip().decode('UTF-8')
-                # if data:
-                #     break
 
                 words = data.split()
                 # print ("checkRemoteKeyPress ", words[2], words[1])
@@ -351,8 +353,8 @@ class RemoteController(Thread):
             #     print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
 
             # return words[2], words[1]
-        except Exception as e:
-            print("RemoteController.checkRemoteKeyPress> exception", e)
+            except Exception as e:
+                print("RemoteController.checkRemoteKeyPress> exception", e)
             #print "no key"
             # return "no", "key"
             # pass
@@ -519,11 +521,9 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             print("Platform.__init__>\n", self)
 
         else:
+            """ this is a test mode """
             self.activeSource       = ListNext(['dac','cd','tape'],'dac')
             self.screenName         = "description of current screen"
-            # self.activeSourceText   = 'DAC'
-            # self.volume_raw        = 100
-            # self.volume_db          = -14.5
             data                    = [0.5]*50
             import numpy as np
             data_r                  = np.arange(2048)
@@ -540,9 +540,17 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             Source.__init__(self)
             Volume.__init__(self)
             RemoteController.__init__(self, events)
+            ControlBoard.__init__(self, events)
+            KeyEvent.__init__(self, events)
             print("Platform.__init__> in test mode")
 
+    def start(self):
+        self.start_capture()
+        super(RemoteController, self).start()
 
+    def stop(self):
+        # self.start_capture()
+        self.remotestop()
 
     def __str__(self):
         text = " >> Displays:"

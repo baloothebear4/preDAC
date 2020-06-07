@@ -91,7 +91,7 @@ def frametest(display):
     # frames = (VU2chFrame, VUV2chFrame, Spectrum2chFrame)
     limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
     events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
-    p = Platform(events, True)
+    p = Platform(events)
     if display=='int':
         d = p.internaldisplay
     else:
@@ -111,14 +111,23 @@ def frametest(display):
     # a = f(geo.coords, p, d, 1.0 )
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    # f = VUMeterFrame
-    # a = f(geo.coords, p, d, 0.5, 'left' )
+    # f = VUMeterAFrame
+    # a = f(geo.coords, p, d, 'left', 0.5 )
 
     # a = testScreen1(p, d)
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    a = MetersScreen(p, d)
+    import math
+    a = MetersAScreen(p, d)
     d.draw(a)
+    for _ in range(0, 10):
+        for x in range(0,360,10):
+
+            p.vu['left'] = math.pow(math.sin(x),2)
+            p.vu['right'] = math.pow(math.cos(x),2)
+            print("x =",x, p.vu)
+            d.draw(a)
+            time.sleep(0.1)
 
     print( "Drawn: %s" % ( a) )
     time.sleep(5)
@@ -272,7 +281,7 @@ def geometrytest():
 if __name__ == "__main__":
     try:
         geometrytest()
-        frametest('int')
+        frametest('front')
         # screentest('front')
     except KeyboardInterrupt:
         pass

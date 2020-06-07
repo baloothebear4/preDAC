@@ -167,18 +167,43 @@ class OLEDdriver(canvas):
         ab     = self.anglerange(geo.w, len)
         angle  = 180-(ab[0] + val * (ab[1]-ab[0]))
         xy     = self.posn(angle, len)
-        # print("angle %s, xy %s, ab %s" % (angle, xy, ab))
+        # print("vector: angle %s, xy %s, ab %s, yoff %d, len %d" % (angle, xy, ab, yoffset, len))
         coords = ( geo.centre[0], yoffset,geo.centre[0]+xy[0], yoffset+xy[1] )
         basis.line( self.trabcd(coords), fill=colour)
+
+    def drawFrameCentredVectorText(self, basis, geo, len, val, yoffset, colour, text, font ):
+        # print("drawFrameCentredVectorText> len %d, val %f, yoffset %d, text %s" % (len, val, yoffset, text))
+        ab     = self.anglerange(geo.w, len)
+        angle  = 180-(ab[0] + val * (ab[1]-ab[0]))
+        xy     = self.posn(angle, len)
+        w, h   = basis.textsize(text=text, font=font)
+        # print("vectorText: angle %s, xy %s, ab %s, yoff %d, len %d" % (angle, xy, ab, yoffset, len))
+        xy = ( geo.centre[0]+xy[0]-w/2, yoffset+xy[1] )
+        basis.text( self.trxy(xy), fill=colour, text=text, font=font)
 
     def drawFrameCentreArc(self, basis, geo, fill, wh, yoffset, len):
         """ yoffset is how far from the bottom side to draw the rect
             size is set to the given height"""
         if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
         if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
-        coords = (geo.centre[0]-wh[0]/2, geo.y0+yoffset, geo.centre[0]+wh[0]/2, geo.y0+wh[1]+yoffset)
+        coords = (geo.centre[0]-wh[0]/2, geo.y1+yoffset, geo.centre[0]+wh[0]/2, geo.y1-wh[1]+yoffset)
         ab     = self.anglerange(geo.w, len)
-        basis.arc(self.trabcd(coords), start=ab[0]+180, end=ab[1]+180, fill=fill)
+        # print("arc wh %s, coords %s, ab %s, geo.co %s, yoff %d, len %d" % (wh, coords, ab, geo.coords, yoffset, len))
+
+        basis.arc(self.trabcd(coords), start=ab[0]+160, end=ab[1]+200, fill=fill)
+        # basis.arc( self.trabcd((0,50,50,0)), start=180, end=270, fill='white')
+
+    def drawFrameCentrePie(self, basis, geo, fill, wh, yoffset, len):
+        """ yoffset is how far from the bottom side to draw the rect
+            size is set to the given height"""
+        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        coords = (geo.centre[0]-wh[0]/2, geo.y1+yoffset, geo.centre[0]+wh[0]/2, geo.y1-wh[1]+yoffset)
+        ab     = self.anglerange(geo.w, len)
+        # print("a  rc wh %s, coords %s, ab %s, geo.co %s, yoff %d, len %d" % (wh, coords, ab, geo.coords, yoffset, len))
+
+        basis.pieslice(self.trabcd(coords), start=ab[0]+180, end=ab[1]+180, fill=fill)
+        # basis.arc( self.trabcd((0,50,50,0)), start=180, end=270, fill='white')
 
     def posn(self, angle, length):
         dx = int(math.cos(math.radians(angle)) * length)
@@ -214,7 +239,7 @@ class OLEDdriver(canvas):
 
     def trabcd(self, coords):
         new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
-        # print("trabcd from %s to %s" % (coords, new))
+        # print("trabcd from %s to %s - device height %f" % (coords, new, self.device.height ))
         return new
         # translate coordinates to screen coordinates
 
@@ -239,47 +264,15 @@ class internalOLED(OLEDdriver):
         self.testdevice()
         print("internalOLED.__init__> display initialised")
 
-
-def getDevice(actual_args=None):
-    """
-    Create device from command-line arguments and return it.
-    """
-    if actual_args is None:
-        actual_args = sys.argv[1:]
-    parser = cmdline.create_parser(description='luma.examples arguments')
-    args = parser.parse_args(actual_args)
-
-    if args.config:
-        # load config from file
-        config = cmdline.load_config(args.config)
-        args = parser.parse_args(config + actual_args)
-
-    # create device
-    try:
-        device = cmdline.create_device(args)
-    except error.Error as e:
-        parser.error(e)
-
-    return device
-
-
-from luma.core import cmdline, error
 class frontOLED(OLEDdriver):
     """ driver for the front 256,64 spi display """
     SPIPORT    = 0
-    HEIGHT     = 64
-    WIDTH      = 256
     FPS        = 40
-    config        = ['-i=spi', '--width=256', '-d=ssd1322', '--spi-bus-speed=2000000']
 
     def __init__(self):
-
-        # OLEDdriver.__init__(self, device=getDevice( frontOLED.config ), fps=frontOLED.FPS)
-        print("***check out the non command line version")
-
         driver = spi(port=frontOLED.SPIPORT)
         OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
-        # #
+
         self.testdevice()
         print("frontOLED.__init__> initialised")
 
