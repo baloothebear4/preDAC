@@ -218,23 +218,22 @@ def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
-    e = Events(( 'Shutdown', 'CtrlPress', 'ScreenSaving','CtrlTurn', 'VolPress', 'VolTurn', 'VolPress', 'Pause', 'Start', 'Stop'))
-
+    e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
 
     global mute, new
     audio   = AudioBoard(e)
-    logic   = audio.chLogic()
-    chlogic = audio.sourceLogic()
+    logic   = audio.sourceLogic()
+    chlogic = audio.chLogic()
     status  = audio.readAudioBoardState()
-    ch      = chlogic[status['active']]
-    print("main() >> active channel:", ch, "=", status['active'])
+
+    print("main() >> active channel:", audio.chid, "=", status)
 
     # r = RotaryEncoder(pinA, pinB, button, buttonpress)
 
     """ Volume knob test code """
     v = VolumeBoard(e)
-    proc = processaudio.AudioProcessor(e)
-    proc.captureAudio()
+    # proc = processaudio.AudioProcessor(e)
+    # proc.captureAudio()
 
 
     OLED = OLEDbar()
@@ -272,6 +271,7 @@ def main():
         line = GetLine()
         if line:
 
+            print("pressed>",line)
             if line == "q":
                 return
             elif line >= "1"  and line <= "6":
@@ -285,16 +285,20 @@ def main():
             elif line == "m":
                 v.volKnobEvent(RotaryEncoder.BUTTONDOWN)
                 chchanged = True
+            elif line == "s":
+                print("AudioBoard>", audio.readAudioBoardState())
+                chchanged = True
 
 
         if v.detectVolChange() or chchanged:
             vol    = v.readVolume()
-            audio.toggleMute(vol)
+            # audio.toggleMute(vol)
+            ch = 1 #audio.activeSource.curr
             status = audio.readAudioBoardState()
             OLED.draw_status( vol-127,'%d = %s' %(ch, logic[ch]),status['mute'], status['gain'], status['phonesdetect'])
             chchanged = False
 
-        proc.captureAudio()
+        # proc.captureAudio()
         # proc.printSpectrum()
         # proc._print()
         # print proc.leftCh()

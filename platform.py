@@ -297,6 +297,10 @@ class RemoteController(Thread):
     """
     def __init__(self, events):
         self.events = events
+        """ as key events block, run as a separate thread """
+        self.running = True
+        Thread.__init__(self)
+
         """ set up the button shutdown """
         SOCKPATH = "/var/run/lirc/lircd"
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -304,16 +308,13 @@ class RemoteController(Thread):
         self.sock.connect(SOCKPATH)
         self.sock.setblocking(True)
 
-        """ as key events block, run as a separate thread """
-        self.running = True
-        Thread.__init__(self)
         # self.start()
 
         print("RemoteController._init__ > ready")
 
     def run(self):
         self.checkRemoteKeyPress()
-        print("RemoteController.run > waiting for Remote Key presses")
+        print("RemoteController.run > exit")
 
     def remotestop(self):
         self.running = False
@@ -323,7 +324,7 @@ class RemoteController(Thread):
         '''
         while self.running:
             try:
-                print ("checkRemoteKeyPress> wait for remote key press ")
+                # print ("checkRemoteKeyPress> wait for remote key press ")
                 data = self.sock.recv(128)    # blocked wait for keypress
                 data = data.strip().decode('UTF-8')
 
@@ -355,9 +356,11 @@ class RemoteController(Thread):
             # return words[2], words[1]
             except Exception as e:
                 print("RemoteController.checkRemoteKeyPress> exception", e)
+                time.sleep(1)
+                break
             #print "no key"
             # return "no", "key"
-            # pass
+                pass
 
     def RemoteAction(self, e):
         print('RemoteController> Remote Keypress: event %s' % e)
@@ -511,7 +514,7 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
 
         """ setup all the HW drivers and interfaces """
         if self.internaldisplay is not None:
-            hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent)  #RemoteController
+            hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent, RemoteController)
             for hw in hwifs:
                 try:
                     hw.__init__(self, events)
@@ -549,7 +552,7 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
         super(RemoteController, self).start()
 
     def stop(self):
-        # self.start_capture()
+        self.stop_capture()
         self.remotestop()
 
     def __str__(self):

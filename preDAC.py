@@ -165,7 +165,7 @@ class Controller:
     def startAction(self):
         self.welcomeTimer.start()
         self.setScreen('start')
-        self.audioready = False
+        self.audioready = 0
         self.platform.start()
 
     def stopAction(self):
@@ -203,8 +203,8 @@ class Controller:
         else:
             print("Controller.setVolumeChange> unknown event", e)
 
-    def RemoteAction(self, e='volume_up'):
-        print("Controller.RemoteAction: ",e)
+    def RemoteAction(self, e):
+        print("Controller.RemoteAction: received event<%s>" % e)
         if e == 'volume_up':
             self.platform.volumeUp()
 
@@ -214,7 +214,7 @@ class Controller:
         elif e =='mute':
             self.platform.toggleMute()
 
-        if e == 'shutdown':
+        elif e == 'shutdown':
             self.PlatformAction('shutdown')
 
         elif e =='forward':
@@ -227,7 +227,7 @@ class Controller:
             self.events.CtrlPress('down')
 
         else:
-            print("Controller.RemotePress> unknown event", e)
+            print("Controller.RemoteAction> unknown event <%s>" % e)
 
     def MoveIcon(self,e):
         if self.activeScreen== 'sourceVol' or self.activeScreen== 'sourceVUVol':
@@ -314,9 +314,10 @@ class Controller:
             self.ScreenSave('cancel_screensave')
 
         elif e == 'capture':
-            if self.audioready: print("Controller.AudioAction> sample buffer underrun, dump old data ")
+            if self.audioready>0:
+                print("Controller.AudioAction> %d sample buffer underrun, dump old data " % self.audioready)
             self.platform.process()
-            self.audioready = True
+            self.audioready +=1
 
         else:
             print("Controller.AudioAction> unknown event ",e)
@@ -371,6 +372,7 @@ class Controller:
 
         print("Controller.run> preDAC startup configured at ", time.gmtime())
         self.startAction()
+        self.audioready = 0
 
         t = time.time()
 
@@ -380,9 +382,9 @@ class Controller:
             """ return the current screen object to run """
             Timer.checkTimers()
             self.platform.checkKeys()
-            if self.platform.nohw: self.audioready = True
+            if self.platform.nohw: self.audioready = 1
 
-            if self.audioready:
+            if self.audioready>0:
                 screen = self.screens[self.activeScreen]
 
                 if self.test_mode:
@@ -401,12 +403,12 @@ class Controller:
                             self.platform.chid, \
                             self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
 
-                self.audioready = False
+                self.audioready = 0
 
                 # print("run> waited for audio: waited", 1000*(time.time()-t))
                 t = time.time()
             else:
-                # print("run> waiting for audio: waited", 1000*(time.time()-t)
+                # print("run> waiting for audio: waited", 1000*(time.time()-t))
                 time.sleep(Controller.loopdelay)
 
         print("Controller.run> terminated")
@@ -416,7 +418,7 @@ def cb( e):
 
 if __name__ == "__main__":
     try:
-        logic = Controller(test_mode=False)
+        logic = Controller(test_mode=True)
         logic.run()
 
     except KeyboardInterrupt:

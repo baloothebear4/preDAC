@@ -100,7 +100,7 @@ class SourceTextFrame(TextFrame):
 
 class dbVolumeTextFrame(TextFrame):
     def draw(self, basis):
-        if self.platform.muted:
+        if self.platform.muteState:
             text = "Mute"
         else:
             text = "%3.1fdB" % self.platform.volume_db

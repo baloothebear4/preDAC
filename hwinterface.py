@@ -22,21 +22,95 @@ from events import Events
 import RPi.GPIO as GPIO
 import os, time, socket
 
-class AudioBoard:  #subclass so that there is only 1 interface point to all the HW classes
-    """                source   board relay,   i2c1 pin ref, gain state, text """
-    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'tape'],
-                      'cd'      : [ 2,               5,  False, 'cd'],
-                      'dac'     : [ 3,               6,  False, 'dac'],
-                      'aux'     : [ 4,               7,  False, 'aux'],
-                      'phono'   : [ 5,               3,  True,  'phono'],
-                      'streamer': [ 6,               2,  False, 'streamer'],
-                      'mute'    : [ 7,               1,  False, 'mute'  ],
-                      'gain'    : [ 8,               0,  False, 'gain'  ]
+class Source:
+    """
+    Management of the source types
+
+    NB: Sources are mapped to audioBoard control logical controls 0 - 5
+    """
+
+    IconFiles = {   'streamer'  : ["Streamer.png"],
+                    'dac'       : ["Dac.png"],
+                    'cd'        : ["CD 0.png", "CD 60.png", "CD 120.png", "CD 180.png", "CD 240.png", "CD 300.png" ],
+                    'tape'      : ["Tape 0.png", "Tape 60.png", "Tape 120.png", "Tape 180.png", "Tape 240.png", "Tape 300.png"],
+                    'aux'       : ["Aux.png"],
+                    'phono'     : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"]  }
+
+    def __init__(self):
+        self.sourcesEnabled    = Source.IconFiles.keys()       # List of available (can change as DAC settings are altered)
+        self.currentIcon       = 0   # icon position in the list of icons for the current source
+        self.screenName        = "description of current screen"
+        self.activeSource      = ListNext(self.sourceLogic(), AudioBoard.DEFAULT_SOURCE)
+
+    @property
+    def activeSourceText(self):
+        return AudioBoard.audioBoardMap[self.activeSource.curr][AudioBoard.SOURCETEXT]
+
+    @property
+    def longestSourceText(self):
+        longest = 0
+        for s in AudioBoard.audioBoardMap:
+            l = len(AudioBoard.audioBoardMap[s][AudioBoard.SOURCETEXT])
+            if l > longest:
+                longest = l
+                text    = AudioBoard.audioBoardMap[s][AudioBoard.SOURCETEXT]
+        return text
+
+    @property
+    def widestSourceText(self):
+        return "Tape"
+
+    def getSourceIconFiles(self, source):
+        return Source.IconFiles[source]
+
+    @property
+    def sourcesAvailable(self):
+        return self.sourcesEnabled
+
+    def prevSource(self):
+        self.currentIcon  = 0
+        self.setSource( self.activeSource.prev )
+        return self.activeSource.curr
+
+    def nextSource(self):
+        self.currentIcon  = 0
+        self.setSource( self.activeSource.next )
+        return self.activeSource.curr
+
+    def nextIcon(self):
+        if self.currentIcon+1 < len(Source.IconFiles[self.activeSource.curr]):
+            self.currentIcon += 1
+        else:
+            self.currentIcon  = 0
+        # print "Source.nextIcon>", self.currentIcon,     len(Source.IconFiles[self.activeSource])
+
+    def sourceLogic(self):
+        #collect the signal sources into a list
+        logic = []
+        for s in AudioBoard.audioBoardMap:
+            if  AudioBoard.audioBoardMap[s][AudioBoard.SIGNAL]:
+                logic.append(s)
+        print("AudioBoard.sourceLogic > ", logic)
+        return logic
+
+
+class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface point to all the HW classes
+    """                source   board relayi2c1 pin ref, gain , text, signal? """
+    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'Tape', True],
+                      'cd'      : [ 2,               5,  False, 'CD', True],
+                      'dac'     : [ 3,               6,  False, 'DAC', True],
+                      'aux'     : [ 4,               7,  False, 'Aux', True],
+                      'phono'   : [ 5,               3,  True,  'Phono', True],
+                      'streamer': [ 6,               2,  False, 'Streamer', True],
+                      'mute'    : [ 7,               1,  False, 'mute', False],
+                      'gain'    : [ 8,               0,  False, 'gain', False]
                     }
+
     POS             = 0   #index to the actualinput position on the Board
     PIN             = 1   #index to the I2C1 chip PIN to control this item
-    GAINSTATE       = 3
-    SOURCETEXT      = 4
+    GAINSTATE       = 2
+    SOURCETEXT      = 3
+    SIGNAL          = 4
 
     OFF             = False
     ON              = True
@@ -49,13 +123,17 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
     address         = 0x20
     PHONESDETECTPIN = 12
 
+    GAINONDB        = 25
+    GAINOFFDB       = 12
+
     def __init__(self, events):
         self.events = events
-        self.State  = {  'active'       : AudioBoard.DEFAULT_SOURCE,
+        self.State  = {  'source'       : AudioBoard.DEFAULT_SOURCE,
                          'phonesdetect' : AudioBoard.OFF,
                          'mute'         : AudioBoard.OFF,
                          'gain'         : AudioBoard.OFF }
-        self.i2c1   = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
+        self.i2c1 = PCF8574(AudioBoard.i2c1_port, AudioBoard.address)
+        Source.__init__(self)
 
         """ run through the channels and set up the relays"""
         for source in AudioBoard.audioBoardMap:
@@ -68,17 +146,32 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         GPIO.add_event_detect(AudioBoard.PHONESDETECTPIN, GPIO.BOTH, callback=self.phonesdetect)
 
         """ set up the default source and unmute """
-        self.setSource(self.State['active'])
+        self.setSource(self.State['source'])
 
-        print("AudioBoard._init__ > ready", self.i2c1.port)
+        print("AudioBoard.__init__ > ready", self.audiostatus())
 
-    def sourceLogic(self):
-        logic = {}
-        for s in AudioBoard.audioBoardMap:
-            if s != 'mute' and s != 'gain':
-                logic.update({s: AudioBoard.audioBoardMap[s][AudioBoard.POS]})
-        print("AudioBoard.sourceLogic > ", logic)
-        return logic
+    @property
+    def muteState(self):
+        return self.State['mute']
+
+    @property
+    def gainState(self):
+        return self.State['gain']
+
+    @property
+    def phonesdetectState(self):
+        return self.State['phonesdetect']
+
+    @property
+    def gaindB(self):
+        if self.gainState:
+            return AudioBoard.GAINONDB
+        else:
+            return AudioBoard.GAINOFFDB
+
+    @property
+    def chid(self):
+        return AudioBoard.audioBoardMap[self.activeSource.curr][AudioBoard.POS]
 
     def chLogic(self):
         logic = {}
@@ -89,12 +182,13 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
 
     def setSource(self, source):
         """ Set the HW to switch on the source selected"""
-        self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['active']][AudioBoard.PIN] ] = AudioBoard.OFF
+        self.i2c1.port[ AudioBoard.audioBoardMap[ self.State['source']][AudioBoard.PIN] ] = AudioBoard.OFF
         self.i2c1.port[ AudioBoard.audioBoardMap[source][AudioBoard.PIN] ] = AudioBoard.ON
+        self.gain(AudioBoard.audioBoardMap[source][AudioBoard.GAINSTATE] )
 
-        print("AudioBoard.setSource > switch from ", self.State['active'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port)
+        print("AudioBoard.setSource > switch from ", self.State['source'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port)
         print("AudioBoard.setSource > status: ", self.State)
-        self.State['active'] = source
+        self.State['source'] = source
 
     def mute(self):
         """ Mute the audio board"""
@@ -108,7 +202,7 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.UNMUTE
         print("AudioBoard.unmute ")
 
-    def toggleMute(self, volume):
+    def invertMute(self, volume):
         """ unmute the audio board"""
         if self.State['mute'] == AudioBoard.ON and volume > 0:
             self.unmute()
@@ -129,13 +223,61 @@ class AudioBoard:  #subclass so that there is only 1 interface point to all the 
         """ phonesdetect pin has triggered an interupt """
         if GPIO.input(AudioBoard.PHONESDETECTPIN) == AudioBoard.PHONES_IN:
             self.State['phonesdetect'] = True
+            self.events.Platform('phones_in')
             print("AudioBoard.phonesdetect> Headphones insert detected")
         else:
             self.State['phonesdetect'] = False
             print("AudioBoard.phonesdetect> Headphones removed")
+            self.events.Platform('phones_out')
 
     def readAudioBoardState(self):
         return self.State
+
+    def audiostatus(self):
+        return "AudioBoard> state %s, active %s, ports %s" % (self.State, self.activeSource, self.i2c1.port)
+
+""" Class to manage lists eg of menu items or sources to find previous and next items """
+class ListNext:
+    def __init__(self, list, startItem):
+        self._list = list
+        self._curr = startItem
+
+    def findItemIndex(self, item):
+        for index, element in enumerate(self._list):
+            if element == item: return index
+        raise ValueError("ListNext.findItemIndex> item not found in list", item, self._list)
+
+    @property
+    def curr(self):
+        return self._curr
+
+    @curr.setter
+    def curr(self, v):
+        if v in self._list:
+            self._curr = v
+        else:
+            raise ValueError("ListNext.curr> item not found in list", v, self._list)
+
+    @property
+    def prev(self):
+        i = self.findItemIndex(self._curr)
+        if i > 0:
+            self.curr = self._list[i-1]
+        else:
+            self.curr = self._list[-1]
+        return self.curr
+
+    @property
+    def next(self):
+        i = self.findItemIndex(self._curr)
+        if i < len(self._list)-1:
+            self.curr =  self._list[i+1]
+        else:
+            self.curr =  self._list[0]
+        return self.curr
+
+    def __str__(self):
+        return "list>%s, current>%s" % (self._list, self.curr)
 
 class ControlBoard:
     """

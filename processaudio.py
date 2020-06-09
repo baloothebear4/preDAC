@@ -23,7 +23,6 @@ CHANNELS        = 2
 INFORMAT        = pyaudio.paInt16
 RATE            = 44100
 FRAMESIZE       = int(1024*2.0)
-duration        = 10
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE
 
@@ -114,8 +113,16 @@ class AudioProcessor(AudioData):
         try:
             self.stream   = self.recorder.open(format = INFORMAT,rate = RATE,channels = CHANNELS,input = True, frames_per_buffer=FRAMESIZE, stream_callback=self.callback)
             self.stream.start_stream()
-        except:
-            print("AudioProcessor.capture> ADC/DAC not available")
+            print("AudioProcessor.start_capture> ADC/DAC ready")
+        except Exception as e:
+            print("AudioProcessor.start_capture> ADC/DAC not available", e)
+
+    def stop_capture(self):
+        try:
+            self.stream.stop_stream()
+            self.stream.close()
+        except Exception as e:
+            print("AudioProcessor.Stop_capture> error", e)
 
     def callback(self, in_data, frame_count, time_info, status):
 
@@ -404,7 +411,7 @@ def main():
     runflag = 1
     while runflag:
 
-        for i in range(int(duration*44100/FRAMESIZE)): #go for a few seconds
+        for i in range(int(10*44100/FRAMESIZE)): #go for a few seconds
 
             audioprocessor.process()
             audioprocessor.printSpectrum()
