@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 """
  preDAC preamplifier project
 
@@ -31,8 +31,6 @@ class KeyEvent:
 
             if line   == "m" :
                 self.events.RemotePress('mute')
-            elif line   == "n" :
-                self.events.RemotePress('unmute')    
             elif line == "u":
                 self.events.RemotePress('volume_up')
             elif line == "d":
