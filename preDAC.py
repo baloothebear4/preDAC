@@ -314,8 +314,8 @@ class Controller:
             self.ScreenSave('cancel_screensave')
 
         elif e == 'capture':
-            if self.audioready>0:
-                print("Controller.AudioAction> %d sample buffer underrun, dump old data " % self.audioready)
+            # if self.audioready>0:
+            #     print("Controller.AudioAction> %d sample buffer underrun, dump old data " % self.audioready)
             self.platform.process()
             self.audioready +=1
 
@@ -397,11 +397,11 @@ class Controller:
 
                 else:
                     self.platform.frontdisplay.draw(screen)
-                    if self.platform.internaldisplay is not None:
-                        self.platform.internaldisplay.draw_status(self.platform.volume_db, \
-                            self.platform.activeSourceText, \
-                            self.platform.chid, \
-                            self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
+                    # if self.platform.internaldisplay is not None:
+                    #     self.platform.internaldisplay.draw_status(self.platform.volume_db, \
+                    #         self.platform.activeSourceText, \
+                    #         self.platform.chid, \
+                    #         self.platform.muteState, self.platform.gainState, self.platform.phonesdetectState)    # this will just be the diagnostics in time
 
                 self.audioready = 0
 
@@ -418,7 +418,7 @@ def cb( e):
 
 if __name__ == "__main__":
     try:
-        logic = Controller(test_mode=True)
+        logic = Controller(test_mode=False)
         logic.run()
 
     except KeyboardInterrupt:

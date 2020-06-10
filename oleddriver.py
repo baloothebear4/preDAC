@@ -69,6 +69,7 @@ class OLEDdriver(canvas):
         self.drawcallback = draw_fn
 
     def testdevice(self):
+        return   #disabled
         self.font = make_font("arial.ttf", 11)
         with self.regulator:
             with canvas(self.device) as c:

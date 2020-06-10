@@ -248,8 +248,8 @@ class ControlBoard:
 
     OFFDETECTPIN = 23
     off          = 0     # signal sent to Control Board to power off
-    PIN_A        = 22 	# Pin 8
-    PIN_B        = 27	# Pin 10
+    PIN_A        = 27 	# Pin 10
+    PIN_B        = 22	# Pin 8
     BUTTON       = 17	# Pin 7
 
     def __init__(self, events):
@@ -329,7 +329,7 @@ class RemoteController(Thread):
                 data = data.strip().decode('UTF-8')
 
                 words = data.split()
-                # print ("checkRemoteKeyPress ", words[2], words[1])
+                print ("checkRemoteKeyPress ", words[2], words[1])
                 '''  using the sequence number removes all key re-trigger '''
 
                 if words[2]   == "KEY_MUTE" and words[1] == "00":
@@ -626,8 +626,9 @@ if __name__ == '__main__':
     try:
         """ ir controller test code """
         irRemote = RemoteController(e)
-        e.RemotePress  += irRemote.RemoteAction    # when the remote controller is pressed
 
+        e.RemotePress  += RemoteAction    # when the remote controller is pressed
+        irRemote.run()
         e.RemotePress('test')
 
         while True:

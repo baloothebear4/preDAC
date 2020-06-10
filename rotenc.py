@@ -125,12 +125,22 @@ def buttonpress(a):
 
     print("Rot enc event ", ev , count)
 
+
 def main():
     '''
     Test harness for the RotaryEncoder and Volume classes
     '''
+    #volume knob
+    # PIN_A        = 26
+    # PIN_B        = 16
+    # BUTTON       = 13
 
-    r = RotaryEncoder(buttonpress)
+    #control knob
+    PIN_A        = 22 	# Pin 8
+    PIN_B        = 27	# Pin 10
+    BUTTON       = 17	# Pin 7
+    r      = RotaryEncoder(PIN_A, PIN_B, BUTTON, buttonpress )
+
 
     loops = 0
 
