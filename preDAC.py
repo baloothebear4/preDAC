@@ -85,7 +85,7 @@ class Controller:
     volchangeTime = 2.0
     srcChangeTime = 2.0
     iconMoveTime  = 0.2
-    menuTime      = 3.0
+    menuTime      = 7.0
     welcomeTime   = 3.0
     screensaveTime= 6.0
     shutdownTime  = 1.0   # slight pause to ensure the shutdown screen is displayed

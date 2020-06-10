@@ -106,23 +106,23 @@ class OLEDdriver(canvas):
     def drawFrameCentrerect(self, basis, geo, fill, wh, yoffset):
         """ yoffset is how far from the bottom side to draw the rect
             size is set to the given height"""
-        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
-        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        # if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        # if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
         coords = (geo.centre[0]-wh[0]/2, geo.y0+yoffset, geo.centre[0]+wh[0]/2, geo.y0+wh[1]+yoffset)
         basis.rectangle(self.trabcd(coords), fill=fill)
 
     def drawFrameLVCentredtext(self, basis, geo, text, font):
         w, h = basis.textsize(text=text, font=font)
-        if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
-        if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text to high for frame")
+        # if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
+        # if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text to high for frame")
         xy = (geo.x0, geo.centre[1]+h/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
     def drawFrameCentredText( self, basis, geo, text, font):
         """ text is written in the centre of the frame """
         w, h = basis.textsize(text=text, font=font)
-        if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text %s too wide %d, for frame %d" % (text, w, geo.w))
-        if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text %s too high %d, for frame %d" % (text, h, geo.h))
+        # if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text %s too wide %d, for frame %d" % (text, w, geo.w))
+        # if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text %s too high %d, for frame %d" % (text, h, geo.h))
         xy = (geo.centre[0]-w/2, geo.centre[1]+h/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
@@ -137,8 +137,8 @@ class OLEDdriver(canvas):
     def drawFrameCentredImage( self, basis, geo, image ):
         w = image.width
         h = image.height
-        if w > geo.w: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
-        if h > geo.h: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
+        # if w > geo.w: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
+        # if h > geo.h: print("OLEDdrive.drawFrameCentredImage> image width exceeds frame")
         xy = (geo.centre[0]-w/2, geo.centre[1]+h/2)
         image =  image.convert("L")  #(self.platform.device.mode)
         basis.bitmap( self.trxy( xy ), image) # fill="white" )
@@ -185,8 +185,8 @@ class OLEDdriver(canvas):
     def drawFrameCentreArc(self, basis, geo, fill, wh, yoffset, len):
         """ yoffset is how far from the bottom side to draw the rect
             size is set to the given height"""
-        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
-        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        # if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        # if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
         coords = (geo.centre[0]-wh[0]/2, geo.y1+yoffset, geo.centre[0]+wh[0]/2, geo.y1-wh[1]+yoffset)
         ab     = self.anglerange(geo.w, len)
         # print("arc wh %s, coords %s, ab %s, geo.co %s, yoff %d, len %d" % (wh, coords, ab, geo.coords, yoffset, len))
@@ -197,8 +197,8 @@ class OLEDdriver(canvas):
     def drawFrameCentrePie(self, basis, geo, fill, wh, yoffset, len):
         """ yoffset is how far from the bottom side to draw the rect
             size is set to the given height"""
-        if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
-        if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
+        # if wh[0]>geo.w: print("OLEDdriver.drawFrameCentrerect> rectangle width is too large for frame")
+        # if wh[1]>geo.h: print("OLEDdriver.drawFrameCentrerect> rectangle height is too large for frame")
         coords = (geo.centre[0]-wh[0]/2, geo.y1+yoffset, geo.centre[0]+wh[0]/2, geo.y1-wh[1]+yoffset)
         ab     = self.anglerange(geo.w, len)
         # print("a  rc wh %s, coords %s, ab %s, geo.co %s, yoff %d, len %d" % (wh, coords, ab, geo.coords, yoffset, len))

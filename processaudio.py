@@ -21,7 +21,7 @@ import pyaudio
 CHANNELS        = 2
 # INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
 INFORMAT        = pyaudio.paInt16
-RATE            = 44100
+RATE            = 33075  # 22050, 24000,
 FRAMESIZE       = int(1024*2.0)
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE
@@ -30,7 +30,7 @@ SILENCESAMPLES  = 5 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
 RMSNOISEFLOOR   = -66  #dB
-SILENCETHRESOLD = 0.06
+SILENCETHRESOLD = 0.02
 
 WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
@@ -243,17 +243,19 @@ class AudioProcessor(AudioData):
 
     def VU(self,channel):
         """ normalise to 0-1 """
-        PeakMax = 10*math.log(2*2^16)  #about 196
-        VUmax   = PeakMax/math.sqrt(2)
-        PeakOff = 50
-        VUOff   = 63
+
+        PeakRange = 50  # antificipated dB range
+        VURange   = 45
+        PeakOff   = 40  # lower limit to display
+        VUOff     = 40
+
 
         peak = 10*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
-        vu   = 10*math.log( self.rmsPower(self.samples[channel]), 10)
+        vu   = self.floor(  (10*math.log( self.rmsPower(self.samples[channel]), 10)+VUOff)/VURange, 0)
         # print("vu ", vu, "peak", peak)
-        peakave = self.peakwindow[channel].average(peak)
+        peakave = self.floor( (self.peakwindow[channel].average(peak)+PeakOff)/PeakRange, 0)
 
-        return ((vu+VUOff)/(VUmax+VUOff), (peakave+PeakOff)/(PeakMax+PeakOff))
+        return (vu, peakave)
 
 
     """ use this to shift the noise floor eg: RMS 20 - 5000 -> 0->5000"""
@@ -319,7 +321,7 @@ class AudioProcessor(AudioData):
     def normalise(self, level):
         """ convert from dB into a percentage """
         """ need to calibrate this more carefully """
-        return (30 + level)/130
+        return (20 + level)/70
 
     def printSpectrum(self, octave, intervalUpperF, left=True):
         FFACTOR = math.pow(2, 1.0/float(2*octave) )

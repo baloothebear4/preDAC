@@ -125,7 +125,7 @@ class SourceIconFrame(Frame):
         for s in sources:
             self.files.update( {s: self.platform.getSourceIconFiles(s)} )
 
-        print("source files>", self.files)
+        # print("source files>", self.files)
         #Build a dict of all the images, sized, positioned, ready to go
         for s in self.files:
             images = []
@@ -397,7 +397,7 @@ class SpectrumFrame(Frame):
 class VU2chFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
-        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
+        limits = ((0.6,"red"), (0.8,"grey"), (0.8,"white"))
         self += VUFrame(self.coords, platform, display, 'left', limits )
         self += VUFrame(self.coords, platform, display, 'right', limits )
         # self += OutlineFrame(self.coords, platform, display)
@@ -406,7 +406,7 @@ class VU2chFrame(Frame):
 class VUV2chFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
-        limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
+        limits = ((0.6,"red"), (0.8,"grey"), (0.8,"white"))
         self += VUVFrame(self.coords, platform, display, 'left', limits )
         self += VUVFrame(self.coords, platform, display, 'right', limits )
         # self += OutlineFrame(self.coords, platform, display)
@@ -422,8 +422,8 @@ class Spectrum2chFrame(Frame):
 class SpectrumStereoFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
-        self += SpectrumFrame(self.coords, platform, display, 'left', 1.0 )
-        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 3, 'red' )
+        self += SpectrumFrame(self.coords, platform, display, 'left', 1.0, 0, colour='red' )
+        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 2, colour='white' )
         self.check()
 
 
