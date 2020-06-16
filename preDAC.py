@@ -89,6 +89,7 @@ class Controller:
     welcomeTime   = 3.0
     screensaveTime= 6.0
     shutdownTime  = 1.0   # slight pause to ensure the shutdown screen is displayed
+    trackchangeTime= 7.0
 
     loopdelay     = 0.0001
 
@@ -96,7 +97,7 @@ class Controller:
         self.test_mode = test_mode
 
         """ Setup the events """
-        self.events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
+        self.events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress', 'Streamer'))
 
         """ Setup the HW, Displays and audio processing """
         self.platform = Platform(self.events)
@@ -113,6 +114,7 @@ class Controller:
         self.screensaveTimer = Timer(Controller.screensaveTime, self.ScreenSave, ['start_screensave'] , 'screensaveTimer')
         self.welcomeTimer    = Timer(Controller.welcomeTime, self.Welcomed, ['welcomeTimeout'], 'welcomeTimer' )
         self.shutdownTimer   = Timer(Controller.shutdownTime, self.platform.poweroff, ['shutdownTimeout'], 'shutdownTimer' )
+        self.trackChangeTimer= Timer(Controller.trackchangeTime, self.StreamerAction, ['trackNotified'], 'trackChangeTimer')
 
         """ Setup the event callbacks """
         self.events.VolKnob      += self.VolumeChange    # when the volume knob, remote or switch is changed
@@ -121,6 +123,7 @@ class Controller:
         self.events.Platform     += self.PlatformAction  # when the system detects a change to be acted on , eg Shutdown
         self.events.RemotePress  += self.RemoteAction    # when the remote controller is pressed
         self.events.Audio        += self.AudioAction     # respond to a new sample, or audio silence
+        self.events.Streamer     += self.StreamerAction     # respond to a new sample, or audio silence
 
 
 
@@ -133,7 +136,9 @@ class Controller:
         self.screenList = {'main'         : { 'class' : MainScreen, 'base' : 'yes', 'title' : '1/3 Oct Spectrum Analyser, Dial & source' },
                            'start'        : { 'class' : WelcomeScreen, 'base' : 'no', 'title' : 'welcome' },
                            'volChange'    : { 'class' : VolChangeScreen, 'base' : 'no', 'title' : 'Incidental volume change indicator' },
-                           'fullSpectrum' : { 'class' : FullSpectrumScreen, 'base' : 'yes', 'title' : '1/6 Octave Spectrum Analyser' },
+                           # 'fullSpectrum' : { 'class' : FullSpectrumScreen, 'base' : 'yes', 'title' : '1/6 Octave Spectrum Analyser' },
+                           'StreamerMeta' : { 'class' : PlayerScreen, 'base' : 'yes', 'title' : 'Track data, volume and source' },
+                           'trackChange'  : { 'class' : TrackScreen, 'base' : 'no', 'title' : 'New Track data' },
                            'stereoSpectrum' :{'class' : StereoSpectrumScreen, 'base' : 'yes', 'title' : 'Stereo Spectrum Analyser' },
                            'VUMeters'     : { 'class' : MetersAScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
                            'shutdown'     : { 'class' : ShutdownScreen, 'base' : 'no', 'title' : 'end' },
@@ -166,7 +171,7 @@ class Controller:
         self.welcomeTimer.start()
         self.setScreen('start')
         self.audioready = 0
-        self.platform.start()
+        self.platform.start_hw()
 
     def stopAction(self):
         self.platform.stop()
@@ -360,6 +365,26 @@ class Controller:
             self.platform.mute()
         elif e == 'phones_out':
             self.platform.unmute()
+
+
+    def StreamerAction(self, e):
+        print("Controller.StreamerAction> event ", e)
+        if e == 'new_track' or e == 'start':
+            print("Controller.StreamerAction> new track - pop up display ", e)
+            self.trackChangeTimer.start()
+            self.activeScreen= 'trackChange'
+
+        elif e == 'stop':
+            print("Controller.StreamerAction> track stopped - display nothing new")
+            self.platform.clear_track()
+
+        elif e =='trackNotified':
+            print("Controller.StreamerAction> track notification timeout")
+            self.activeScreen= self.baseScreen
+
+        else:
+            print("Controller.StreamerAction> unknown event ", e)
+
 
 
     """

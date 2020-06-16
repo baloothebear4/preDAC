@@ -111,6 +111,31 @@ class MenuFrame(TextFrame):
         text = self.platform.screenName
         self.display.drawFrameCentredText(basis, self, text, self.font)
 
+class TrackFrame(TextFrame):
+    def draw(self, basis):
+        text = self.platform.track
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class ArtistFrame(TextFrame):
+    def draw(self, basis):
+        text = self.platform.artist
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class AlbumFrame(TextFrame):
+    def draw(self, basis):
+        text = self.platform.album
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class MetaDataFrame(Frame):
+    def __init__(self, bounds, platform, display, scale, H):
+        one_line  = 'line 1'
+        two_lines = 'line 1 \n line 2'
+        Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
+        self += TrackFrame(self.coords, platform, display, 'top', 0.6, two_lines )
+        self += ArtistFrame(self.coords, platform, display, 'middle', 0.2, one_line )
+        self += AlbumFrame(self.coords, platform, display, 'bottom', 0.2, one_line )
+        self.check()
+
 class SourceIconFrame(Frame):
     """
         Displays a an Icon for the source type and animates it
@@ -345,9 +370,9 @@ class SpectrumFrame(Frame):
     - scale is used to determine how wide the frame is as a % of the parent frame
     - channel 'left' or 'right' selects the audio channel and screen alignment
     """
-    BARGAP    = 2  # between bars
+    BARGAP    = 3  # between bars
     BARWMIN   = 1
-    BARWMAX   = 5
+    BARWMAX   = 6
 
     def __init__(self, bounds, platform, display, channel, scale, right_offset=0, colour='white'):
         self.channel        = channel
@@ -376,7 +401,7 @@ class SpectrumFrame(Frame):
                 if  self.bars <= self.max_bars: break
             if  self.bars <= self.max_bars: break
         self.barw = barw
-        print("SpectrumFrame.__init__> max bars=%d, octave spacing=1/%d, num bars=%d, width=%d" % (self.max_bars, spacing, self.bars, self.barw))
+        print("SpectrumFrame.__init__> Selected spectrum: max bars=%d, octave spacing=1/%d, num bars=%d, width=%d" % (self.max_bars, spacing, self.bars, self.barw))
 
     def draw(self, basis):
         if self.channel=='right':
@@ -422,8 +447,8 @@ class Spectrum2chFrame(Frame):
 class SpectrumStereoFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
-        self += SpectrumFrame(self.coords, platform, display, 'left', 1.0, 0, colour='red' )
-        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 2, colour='white' )
+        self += SpectrumFrame(self.coords, platform, display, 'left', 1.0, )
+        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 2, colour='red' )
         self.check()
 
 
@@ -538,7 +563,18 @@ class VUVScreen(Frame):   # comprises volume on the left, spectrum on the right
         self += VUV2chFrame(display.boundary, platform, display, 0.5, 'left')
         self.check()
 
+class PlayerScreen(Frame):   # comprises volume on the left, spectrum on the right
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'right')
+        self += MetaDataFrame(display.boundary, platform, display, 0.8, 'left')
+        self.check()
 
+class TrackScreen(Frame):   # comprises volume on the left, spectrum on the right
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += MetaDataFrame(display.boundary, platform, display, 1.0, 'left')
+        self.check()
 
 # not sure if I want this any more
 class depVolumeSourceFrame(Frame):

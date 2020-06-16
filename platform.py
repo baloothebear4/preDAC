@@ -18,6 +18,7 @@ from processaudio import AudioProcessor
 from keyevents    import KeyEvent   # used for testing without all HW attached
 from rotenc       import RotaryEncoder
 from pcf8574      import PCF8574
+from streamerif   import StreamerInterface
 
 from events       import Events
 from threading    import Thread
@@ -98,9 +99,9 @@ class Source:
 
 class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface point to all the HW classes
     """                source   board relayi2c1 pin ref, gain , text, signal? """
-    audioBoardMap = { 'tape'    : [ 1,               4,  False, 'Tape', True],
+    audioBoardMap = { 'dac'     : [ 1,               4,  False, 'DAC', True],
                       'cd'      : [ 2,               5,  False, 'CD', True],
-                      'dac'     : [ 3,               6,  False, 'DAC', True],
+                      'tape'    : [ 3,               6,  False, 'Tape', True],
                       'aux'     : [ 4,               7,  False, 'Aux', True],
                       'phono'   : [ 5,               3,  True,  'Phono', True],
                       'streamer': [ 6,               2,  False, 'Streamer', True],
@@ -119,7 +120,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
     MUTE            = OFF
     UNMUTE          = ON
     PHONES_IN       = 0
-    DEFAULT_SOURCE  = 'tape'
+    DEFAULT_SOURCE  = 'dac'
 
     i2c1_port       = 1
     address         = 0x20
@@ -286,7 +287,7 @@ class ControlBoard:
 
 
 
-class RemoteController(Thread):
+class RemoteController():
     """
         The IR receiver device is managed by the system lirc Module
         this is configured to use a particular remote control.
@@ -297,9 +298,7 @@ class RemoteController(Thread):
     """
     def __init__(self, events):
         self.events = events
-        """ as key events block, run as a separate thread """
-        self.running = True
-        Thread.__init__(self)
+
 
         """ set up the button shutdown """
         SOCKPATH = "/var/run/lirc/lircd"
@@ -309,7 +308,10 @@ class RemoteController(Thread):
         self.sock.setblocking(True)
 
         # self.start()
-
+        """ as key events block, run as a separate thread """
+        self.running = True
+        self.remote = Thread(target=self.checkRemoteKeyPress)
+        self.remote.start()
         print("RemoteController._init__ > ready")
 
     def run(self):
@@ -397,7 +399,7 @@ class VolumeBoard(PCF8574, Volume):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 80
+    DEFAULT_VOL  = 40
 
     """ Map of the volume relay step to the i2c pin """
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
@@ -496,7 +498,8 @@ class VolumeBoard(PCF8574, Volume):
     def volumestatus(self):
         return "VolumeBoard> vol %f, vol_dB %f, ports %s" % (self.volume, self.volume_db, self.i2c2.port)
 
-class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioProcessor, KeyEvent):
+class Platform(VolumeBoard, ControlBoard, AudioBoard, \
+                    RemoteController, AudioProcessor, StreamerInterface, KeyEvent):
     """ this is the HW abstraction layer and includes the device handlers and data model """
     def __init__(self, events):
         """ start the displays """
@@ -514,7 +517,7 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
 
         """ setup all the HW drivers and interfaces """
         if self.internaldisplay is not None:
-            hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent, RemoteController)
+            hwifs = (ControlBoard, AudioBoard, VolumeBoard, AudioProcessor, KeyEvent, RemoteController, StreamerInterface)
             for hw in hwifs:
                 try:
                     hw.__init__(self, events)
@@ -547,13 +550,13 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, RemoteController, AudioPro
             KeyEvent.__init__(self, events)
             print("Platform.__init__> in test mode")
 
-    def start(self):
+    def start_hw(self):
         self.start_capture()
-        super(RemoteController, self).start()
 
     def stop(self):
         self.stop_capture()
         self.remotestop()
+        self.streamerstop()
 
     def __str__(self):
         text = " >> Displays:"
