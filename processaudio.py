@@ -16,6 +16,7 @@
 import struct, time, math
 import numpy as np
 import pyaudio
+from events import Events
 
 # constants
 CHANNELS        = 2
@@ -409,7 +410,8 @@ class AudioProcessor(AudioData):
 
 def main():
     # main loop
-    audioprocessor = AudioProcessor()
+    events = Events('Audio')
+    audioprocessor = AudioProcessor(events)
     runflag = 1
     while runflag:
 

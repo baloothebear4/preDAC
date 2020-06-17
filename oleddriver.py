@@ -45,6 +45,18 @@ def scaleImage(image_path, geo):
         return image.resize((wsize, geo.h), Image.ANTIALIAS)
     return image
 
+def scalefont(display, wh, text, font, min=3):
+    fontsize    = wh[1]
+    font        = make_font("arial.ttf", fontsize)
+    fontwh      = display.textsize(text, font)  #[wh[0]+1, wh[1]+1]   # to ensure at least one cycle runs
+    while fontwh[0] > wh[0] or fontwh[1] > wh[1]:
+        font   = make_font("arial.ttf", fontsize)
+        fontwh = display.textsize(text, font)
+        fontsize -= 1
+        if fontsize < min: break
+    print("scalefont> font size %d, fontwh %s, text<%s>" % (fontsize, fontwh, text))
+    return font, fontwh
+
 class OLEDdriver(canvas):
     """
         Base class to control the drawing primatives to the screen

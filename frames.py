@@ -12,8 +12,9 @@
 
 """
 
-from oleddriver import make_font, scaleImage
+from oleddriver import make_font, scaleImage, scalefont
 from framecore import Frame, Geometry
+from textwrap import shorten, wrap
 import os
 
 
@@ -70,17 +71,29 @@ class TextFrame(Frame):
         - V is the vertical alignment
         - Y is the y scaler
     """
+
+
     def __init__(self, bounds, platform, display, V, Y, text=''):
         Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(1.0,Y), Valign=V, Halign='centre')
         # scale the font so the widest fits
-        self.text   = text
-        self._width, self._height = [self.w+1, self.h+1]
-        fontsize    = self.h
-        while self._width > self.w or self._height > self.h:
-            self.font   = make_font("arial.ttf", fontsize)
-            self._width, self._height = display.textsize(text, self.font)
-            fontsize -= 1
-        print("TextFrame> font size", fontsize, self._width, self._height, text)
+        self.text                  = text
+        self.rawtext               = text
+
+        if text != '':
+            self.font, self.fontwh     = scalefont(display, self.wh, text, "arial.ttf")
+            self.charw  = int(self.w/ (self.fontwh[0]/len(text)) )-1 #  be safe as rounds down how many characters wide will fit?
+        else:
+            self.font   = make_font("arial.ttf", self.h/2)
+            self.fontwh = display.textsize('2', self.font)
+            self.charw  = int(self.w/ self.fontwh[0] )-1 # be safe as rounds down how many characters wide will fit?
+
+        # self._width, self._height = [self.w+1, self.h+1]
+        # fontsize    = self.h
+        # while self._width > self.w or self._height > self.h:
+        #     self.font   = make_font("arial.ttf", fontsize)
+        #     self._width, self._height = display.textsize(text, self.font)
+        #     fontsize -= 1
+
 
     def draw(self, basis):
         self.display.drawFrameCentredText(basis, self, self.text, self.font)
@@ -112,28 +125,85 @@ class MenuFrame(TextFrame):
         self.display.drawFrameCentredText(basis, self, text, self.font)
 
 class TrackFrame(TextFrame):
+    """ wrap the track name and centre the first 2 lines - discard any more
+        if there is one line - write at full font height, else half
+        trys to display at the largest font possible
+        update the font size once for each track
+
+        if text does not fit:  rescale font and/or wrap
+        draw text
+
+        if does not fit:
+            scale down, then wrap, then truncate
+        else:
+            scale up until   fits
+
+        the problem is that font scaling is non-linear and the algorithm ends up in loops - needs better hysterises
+
+        """
+    MINFONTSIZE = 12
+
     def draw(self, basis):
-        text = self.platform.track
-        self.display.drawFrameCentredText(basis, self, text, self.font)
+        text       = self.platform.track
+        fontwh     = basis.textsize(text, self.font)
+        if text   != '' and text != self.rawtext:
+            self.rawtext   = text
+            # self.fontwh = fontwh
+            # self.charw  = int(self.w/ (self.fontwh[0] /len(self.text)) )-1  #how many characters wide will fit?
+
+            # print("TrackFrame.draw> start w,h %s, charw %d, len  <%d>, fontwh %s, text %s" % ( self.wh, self.charw,len(text), self.fontwh, text ) )
+
+            # if len(text) > self.charw and self.fontwh[1] <self.h:
+            #     self.font, self.fontwh  = scalefont(self.display, self.wh, text, "arial.ttf")
+            #     print("TrackFrame.draw> Scale Down w,h %s, charw %d, len  <%d>, fontwh %s" % ( self.wh, self.charw,len(text), self.fontwh) )
+
+            # if self.fontwh[0]> self.w:
+            self.font, self.fontwh  = scalefont(self.display, self.wh, text, "arial.ttf")
+            print("TrackFrame.draw> Scale Down w,h %s, charw %d, len  <%d>, fontwh %s" % ( self.wh, self.charw,len(text), self.fontwh) )
+
+            if self.fontwh[1]< (self.h/2)-1:
+                self.font  = make_font("arial.ttf", (self.h/2)-1)
+                onecharwh  = basis.textsize('2', self.font)
+                self.charw = int(self.w/ onecharwh[0] ) #how many characters wide will fit?
+                textlines  = wrap(text, width=self.charw)
+                print(textlines)
+                text       = textlines[0].center(self.charw) + '\n' + textlines[1].center(self.charw)
+                print("TrackFrame.draw> Wrap w,h %s, charw %d, len  <%d>" % ( self.wh, self.charw,len(text)) )
+
+            # print("TrackFrame.draw> w,h : text size for:", self.w, self.h, basis.textsize(text, self.font), text)
+            self.text   = text
+            self.display.drawFrameCentredText(basis, self, text, self.font)
+        else:
+            self.display.drawFrameCentredText(basis, self, self.text, self.font)
 
 class ArtistFrame(TextFrame):
     def draw(self, basis):
-        text = self.platform.artist
+        # print(self.charw)
+        text = shorten(self.platform.artist, width=self.charw)   #.center(self.charw)
+        # print("ArtistFrame>charw %d, <%s>, textlen %d, wh %s" % (self.charw, text, len(text), self.wh))
         self.display.drawFrameCentredText(basis, self, text, self.font)
 
 class AlbumFrame(TextFrame):
     def draw(self, basis):
-        text = self.platform.album
+        text = shorten(self.platform.album, width=self.charw)   #.center(self.charw)
+        # print("AlbumFrame>charw %d, <%s>, textlen %d, wh %s" % (self.charw, text, len(text), self.wh))
         self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class AlbumArtistFrame(Frame):
+    def __init__(self, bounds, platform, display, V, scale):
+        one_line  = 'LONG WITH FAT CHARS'
+        Frame.__init__(self, bounds, platform, display, scalers=scale, Valign=V, Halign='centre')
+        self += ArtistFrame(self.coords, platform, display, 'top', 0.5, one_line )
+        self += AlbumFrame(self.coords, platform, display, 'bottom', 0.5, one_line )
+        self.check()
 
 class MetaDataFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
-        one_line  = 'line 1'
-        two_lines = 'line 1 \n line 2'
+        one_line = " SOME FAT STUFF"
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
-        self += TrackFrame(self.coords, platform, display, 'top', 0.6, two_lines )
-        self += ArtistFrame(self.coords, platform, display, 'middle', 0.2, one_line )
-        self += AlbumFrame(self.coords, platform, display, 'bottom', 0.2, one_line )
+        self += AlbumArtistFrame(self.coords, platform, display, 'bottom', (scale, 0.4) )
+        self += TrackFrame(self.coords, platform, display, 'top', 0.6, one_line )
+
         self.check()
 
 class SourceIconFrame(Frame):

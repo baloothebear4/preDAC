@@ -147,7 +147,7 @@ class StreamerInterface(MPDMetaData, Thread):
                     else:
                         self.events.Streamer('stop')
 
-                print("StreamerInterface.checkStreamerEvents> processed changes ", changed, self)
+                print("StreamerInterface.checkStreamerEvents> processed changes ", changed)
 
             except Exception as e:
                 print("StreamerInterface.checkStreamerEvents> exception", e)
