@@ -15,6 +15,7 @@
 from oleddriver import make_font, scaleImage, scalefont
 from framecore import Frame, Geometry
 from textwrap import shorten, wrap
+from copy import copy
 import os
 
 
@@ -144,9 +145,9 @@ class TrackFrame(TextFrame):
     MINFONTSIZE = 12
 
     def draw(self, basis):
-        text       = self.platform.track
-        fontwh     = basis.textsize(text, self.font)
-        if text   != '' and text != self.rawtext:
+        text  = copy(self.platform.track)
+        fontwh     = basis.textsize(self.text, self.font)
+        if text != self.rawtext:
             self.rawtext   = text
             # self.fontwh = fontwh
             # self.charw  = int(self.w/ (self.fontwh[0] /len(self.text)) )-1  #how many characters wide will fit?
@@ -167,12 +168,12 @@ class TrackFrame(TextFrame):
                 self.charw = int(self.w/ onecharwh[0] ) #how many characters wide will fit?
                 textlines  = wrap(text, width=self.charw)
                 print(textlines)
-                text       = textlines[0].center(self.charw) + '\n' + textlines[1].center(self.charw)
-                print("TrackFrame.draw> Wrap w,h %s, charw %d, len  <%d>" % ( self.wh, self.charw,len(text)) )
+                if len(textlines)>0: text       = textlines[0].center(self.charw) + '\n' + textlines[1].center(self.charw)
+                print("TrackFrame.draw> Wrap w,h %s, charw %d, len  <%d>" % ( self.wh, self.charw,len(self.text)) )
 
             # print("TrackFrame.draw> w,h : text size for:", self.w, self.h, basis.textsize(text, self.font), text)
             self.text   = text
-            self.display.drawFrameCentredText(basis, self, text, self.font)
+            self.display.drawFrameCentredText(basis, self, self.text, self.font)
         else:
             self.display.drawFrameCentredText(basis, self, self.text, self.font)
 
@@ -440,7 +441,7 @@ class SpectrumFrame(Frame):
     - scale is used to determine how wide the frame is as a % of the parent frame
     - channel 'left' or 'right' selects the audio channel and screen alignment
     """
-    BARGAP    = 3  # between bars
+    BARGAP    = 4  # between bars
     BARWMIN   = 1
     BARWMAX   = 6
 

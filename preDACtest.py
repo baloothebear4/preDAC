@@ -218,7 +218,7 @@ def main():
     '''
     Test harness for the i2c and 2 display classes
     '''
-    e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
+    e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolTurn', 'Audio', 'RemotePress'))
 
     global mute, new
     audio   = AudioBoard(e)
@@ -274,7 +274,7 @@ def main():
             print("pressed>",line)
             if line == "q":
                 return
-            elif line >= "1"  and line <= "6":
+            elif line >= "0"  and line <= "5":
                 ch   = int(line)
                 print("Channel=", ch, " source=", logic[ch])
                 audio.setSource(logic[ch])
