@@ -26,7 +26,7 @@ class MPDMetaData:
     """
         Data model class to manage the metadata captured from MPD
     """
-    ALLODIGISIG_IP  = '192.168.1.239'
+
     SONG            = ('artist', 'album', 'title')
     STATUS          = ('state', 'elapsed', 'duration')
     ALL             = SONG + STATUS
@@ -97,21 +97,13 @@ class StreamerInterface(MPDMetaData, Thread):
         Runs in a separate thread so that the idle method is blocking until a
         change in status is received and an Streamer Event is raised
     """
+    STREAMER_IP  = { 'dac': '192.168.1.239', 'streamer': '192.168.1.218' }
+
     def __init__(self, events):
         self.events = events
 
         """ setup the interface and data model """
         MPDMetaData.__init__(self)
-        self.client = MPDClient()                 # create client object
-        self.client.timeout = 10                  # network timeout in seconds (floats allowed), default: None
-        self.client.idletimeout = None            # timeout for fetching the result of the idle command is handled seperately, default: None
-        self.client.connect(MPDMetaData.ALLODIGISIG_IP, 6600) # connect to MPD
-        self.update( self.client.currentsong(), self.client.status())
-
-        """ as mpd.idle blocks, run as a separate thread """
-        self.running = True
-        self.checker = Thread(target=self.checkStreamerEvents)
-        self.checker.start()
 
         print("StreamerInterface._init__ > ready. MPD v", self.client.mpd_version)
         # self.start()
@@ -120,11 +112,60 @@ class StreamerInterface(MPDMetaData, Thread):
         self.checkStreamerEvents()
         print("StreamerInterface.run > exit")
 
+    def streamersource(self,source):
+        """
+            run if these source has metadata else stop
+
+        """
+
+        try:
+            print("StreamerInterface.streamersource > stop")
+            self.streamerstop()
+            self.clear_track()
+        except:
+            pass
+            # NB: may fail if nothing started
+
+        if source in StreamerInterface.STREAMER_IP:
+            print("StreamerInterface.run > start metadata for ", source)
+            try:
+                self.source = source
+                self.client = MPDClient()                 # create client object
+                self.client.timeout = 10                  # network timeout in seconds (floats allowed), default: None
+                self.client.idletimeout = None            # timeout for fetching the result of the idle command is handled seperately, default: None
+                self.client.connect(StreamerInterface.STREAMER_IP[source], 6600) # connect to MPD
+                self.update( self.client.currentsong(), self.client.status())
+                self.client.close()                     # send the close command
+                self.client.disconnect()                # disconnect from the server
+
+                """ as mpd.idle blocks, run as a separate thread """
+                self.running = True
+                self.checker = Thread(target=self.checkStreamerEvents)
+                self.checker.start()
+            except:
+                print("StreamerInterface.run > failed start metadata for ", source)
+
+
     def streamerstop(self):
         self.running = False
         self.client.close()                     # send the close command
         self.client.disconnect()                # disconnect from the server
+        self.clear_track()
         print("StreamerInterface.run > stop")
+
+    def streamerpause(self):
+        try:
+            tempclient = MPDClient()                 # create client object
+            tempclient.connect(StreamerInterface.STREAMER_IP[self.source], 6600) # connect to MPD
+            tempclient.pause()
+            tempclient.close()
+            tempclient.disconnect()
+        except Exception as e:
+            print("StreamerInterface.streamerpause > failed ", e)
+
+
+    def streamerplay(self):
+        self.client.play()
 
     def checkStreamerEvents(self):
         '''
@@ -133,9 +174,15 @@ class StreamerInterface(MPDMetaData, Thread):
         while self.running:
             try:
                 print ("\nStreamerInterface.checkStreamerEvents> wait for MPD events... ")
+                self.client = MPDClient()                 # create client object
+                self.client.idletimeout = None            # timeout for fetching the result of the idle command is handled seperately, default: None
+                self.client.connect(StreamerInterface.STREAMER_IP[self.source], 6600) # connect to MPD
 
                 self.client.idle('player')
+
                 changed   = self.update( self.client.currentsong(), self.client.status())
+                self.client.close()                     # send the close command
+                self.client.disconnect()
 
                 """ multiple events can be triggered from one event update """
                 if changed['new_track']:
@@ -148,6 +195,7 @@ class StreamerInterface(MPDMetaData, Thread):
                         self.events.Streamer('stop')
 
                 print("StreamerInterface.checkStreamerEvents> processed changes ", changed)
+                time.sleep(0.1)
 
             except Exception as e:
                 print("StreamerInterface.checkStreamerEvents> exception", e)

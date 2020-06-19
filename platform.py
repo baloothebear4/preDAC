@@ -148,8 +148,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         GPIO.setup(AudioBoard.PHONESDETECTPIN, GPIO.IN)
         GPIO.add_event_detect(AudioBoard.PHONESDETECTPIN, GPIO.BOTH, callback=self.phonesdetect)
 
-        """ set up the default source and unmute """
-        self.setSource(self.State['source'])
+
 
         print("AudioBoard.__init__ > ready", self.audiostatus())
 
@@ -192,6 +191,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         print("AudioBoard.setSource > switch from ", self.State['source'], "to ", source, "pin", AudioBoard.audioBoardMap[source][AudioBoard.PIN], self.i2c1.port)
         print("AudioBoard.setSource > status: ", self.State)
         self.State['source'] = source
+        self.streamersource(source)
 
     def mute(self):
         """ Mute the audio board"""
@@ -313,7 +313,7 @@ class RemoteController():
 
         # self.start()
         """ as key events block, run as a separate thread """
-        self.running = True
+        self.remote_running = True
         self.remote = Thread(target=self.checkRemoteKeyPress)
         self.remote.start()
         print("RemoteController._init__ > ready")
@@ -323,12 +323,12 @@ class RemoteController():
         print("RemoteController.run > exit")
 
     def remotestop(self):
-        self.running = False
+        self.remote_running = False
 
     def checkRemoteKeyPress(self):
         '''Get the next key pressed. raise events accordingly
         '''
-        while self.running:
+        while self.remote_running:
             try:
                 # print ("checkRemoteKeyPress> wait for remote key press ")
                 data = self.sock.recv(128)    # blocked wait for keypress
@@ -353,9 +353,11 @@ class RemoteController():
                 elif words[2] == "KEY_STOP" and words[1] == "00":
                     self.events.RemotePress('stop')
                 elif words[2] == "KEY_PAUSE" and words[1] == "00":
-                    print("RemoteController.checkRemoteKeyPress> pause key pressed, no linked event")
+                    self.events.RemotePress('pause')
+                    # print("RemoteController.checkRemoteKeyPress> pause key pressed, no linked event")
                 elif words[2] == "KEY_PLAY" and words[1] == "00":
-                    print("RemoteController.checkRemoteKeyPress> play key pressed, no linked event")
+                    # print("RemoteController.checkRemoteKeyPress> play key pressed, no linked event")
+                    self.events.RemotePress('play')
             # else:
             #     print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
 
@@ -532,6 +534,10 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, \
                 except Exception as e:
                     print("Platform.__init__> failed to start %s > %s" % (hw.__name__, e))
             self.nohw = False
+
+            """ set up the default source and unmute """
+            self.setSource(self.State['source'])
+            
             print("Platform.__init__>\n", self)
 
         else:

@@ -128,7 +128,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'sourceVUVol'
+        self.baseScreen     = 'StreamerMeta'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -230,6 +230,12 @@ class Controller:
 
         elif e =='stop':
             self.events.CtrlPress('down')
+
+        elif e =='pause':
+            self.platform.streamerpause()
+
+        elif e =='play':
+            self.platform.streamerplay()
 
         else:
             print("Controller.RemoteAction> unknown event <%s>" % e)
