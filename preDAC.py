@@ -128,7 +128,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'VUMeters'
+        self.baseScreen     = 'sourceVUVol'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -142,7 +142,7 @@ class Controller:
                            'stereoSpectrum' :{'class' : StereoSpectrumScreen, 'base' : 'yes', 'title' : 'Stereo Spectrum Analyser' },
                            'VUMeters'     : { 'class' : MetersAScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
                            'shutdown'     : { 'class' : ShutdownScreen, 'base' : 'no', 'title' : 'end' },
-                           'sourceVol'    : { 'class' : SourceVolScreen,'base' : 'yes', 'title' : 'Source Icons & Volume Dial' },
+                           'sourceVol'    : { 'class' : SourceVolScreen,'base' : 'no', 'title' : 'Source Icons & Volume Dial' },
                            'screenTitle'  : { 'class' : ScreenTitle, 'base' : 'no', 'title' : 'Displays screen titles for menu' },
                            'screenSaver'  : { 'class' : ScreenSaver, 'base' : 'no', 'title' : 'all gone quiet' },
                            'sourceVUVol'  : { 'class' : SourceVUVolScreen, 'base' : 'yes', 'title' : ' Source Icons, VU & Vol Dial' },
@@ -251,7 +251,7 @@ class Controller:
             self.MoveIcon('startIcons')  # get the icons moving is not already
             self.srcChangeTimer.start()
             self.events.CtrlPress -= self.MenuAction
-            self.platform.mute()
+            # self.platform.mute()
             self.platform.nextSource()
 
         elif e == 'anticlockwise':
@@ -259,7 +259,7 @@ class Controller:
             self.MoveIcon('startIcons')  # get the icons moving is not already
             self.srcChangeTimer.start()
             self.events.CtrlPress -= self.MenuAction
-            self.platform.mute()
+            # self.platform.mute()
             self.platform.prevSource()
 
         elif e =='stopCtrl':

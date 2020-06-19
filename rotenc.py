@@ -51,8 +51,8 @@ class RotaryEncoder:
         GPIO.setup(self.button, GPIO.IN)#, pull_up_down=GPIO.PUD_UP)
 
         # Add event detection to the GPIO inputs
-        GPIO.add_event_detect(self.pinA, GPIO.FALLING, callback=self.switch_event)
-        GPIO.add_event_detect(self.pinB, GPIO.FALLING, callback=self.switch_event)
+        GPIO.add_event_detect(self.pinA, GPIO.RISING, callback=self.switch_event, bouncetime=5)
+        GPIO.add_event_detect(self.pinB, GPIO.RISING, callback=self.switch_event, bouncetime=5)
         GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event, bouncetime=5)
 
 
@@ -131,14 +131,14 @@ def main():
     Test harness for the RotaryEncoder and Volume classes
     '''
     #volume knob
-    # PIN_A        = 26
-    # PIN_B        = 16
-    # BUTTON       = 13
+    PIN_A        = 26
+    PIN_B        = 16
+    BUTTON       = 13
 
     #control knob
-    PIN_A        = 22 	# Pin 8
-    PIN_B        = 27	# Pin 10
-    BUTTON       = 17	# Pin 7
+    # PIN_A        = 22 	# Pin 8
+    # PIN_B        = 27	# Pin 10
+    # BUTTON       = 17	# Pin 7
     r      = RotaryEncoder(PIN_A, PIN_B, BUTTON, buttonpress )
 
 

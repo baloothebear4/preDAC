@@ -211,7 +211,7 @@ class AudioProcessor(AudioData):
         self.firstfreq      = fcentre
         intervalUpperF = []
         centres        = []
-        print("AudioProcessor.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre))
+        # print("AudioProcessor.createBands >Calculate Octave band frequencies: 1/%2d octave, starting at %2f Hz" % (spacing, fcentre))
         #
         # Loop in octaves bands
         #
@@ -239,7 +239,7 @@ class AudioProcessor(AudioData):
             startbin = bincount+1
 
 
-        print("AudioProcessor.createBands>  %d bands determined at: %s" % (len(centres), ["%1.0f" % f for f in centres]))
+        # print("AudioProcessor.createBands>  %d bands determined at: %s" % (len(centres), ["%1.0f" % f for f in centres]))
         return intervalUpperF
 
     def VU(self,channel):

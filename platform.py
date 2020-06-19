@@ -249,9 +249,13 @@ class ControlBoard:
 
     OFFDETECTPIN = 23
     off          = 0     # signal sent to Control Board to power off
-    PIN_A        = 27 	# Pin 10
-    PIN_B        = 22	# Pin 8
-    BUTTON       = 17	# Pin 7
+    # PIN_A        = 27 	# Pin 10
+    # PIN_B        = 22	# Pin 8
+    # BUTTON       = 17	# Pin 7
+
+    PIN_A        = 16
+    PIN_B        = 26
+    BUTTON       = 13
 
     def __init__(self, events):
         self.events = events
@@ -392,9 +396,13 @@ class VolumeBoard(PCF8574, Volume):
     ON           = True
 
     """ Volume Control Rotary Encoder on the Volume Board """
-    PIN_A        = 26
-    PIN_B        = 16
-    BUTTON       = 13
+    # PIN_A        = 16
+    # PIN_B        = 26
+    # BUTTON       = 13
+
+    PIN_A        = 27 	# Pin 10
+    PIN_B        = 22	# Pin 8
+    BUTTON       = 17	# Pin 7
 
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0

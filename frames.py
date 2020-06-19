@@ -15,7 +15,6 @@
 from oleddriver import make_font, scaleImage, scalefont
 from framecore import Frame, Geometry
 from textwrap import shorten, wrap
-from copy import copy
 import os
 
 
@@ -145,22 +144,13 @@ class TrackFrame(TextFrame):
     MINFONTSIZE = 12
 
     def draw(self, basis):
-        text  = copy(self.platform.track)
-        fontwh     = basis.textsize(self.text, self.font)
+        text     = self.platform.track
+        fontwh   = basis.textsize(self.text, self.font)
         if text != self.rawtext:
             self.rawtext   = text
-            # self.fontwh = fontwh
-            # self.charw  = int(self.w/ (self.fontwh[0] /len(self.text)) )-1  #how many characters wide will fit?
 
-            # print("TrackFrame.draw> start w,h %s, charw %d, len  <%d>, fontwh %s, text %s" % ( self.wh, self.charw,len(text), self.fontwh, text ) )
-
-            # if len(text) > self.charw and self.fontwh[1] <self.h:
-            #     self.font, self.fontwh  = scalefont(self.display, self.wh, text, "arial.ttf")
-            #     print("TrackFrame.draw> Scale Down w,h %s, charw %d, len  <%d>, fontwh %s" % ( self.wh, self.charw,len(text), self.fontwh) )
-
-            # if self.fontwh[0]> self.w:
             self.font, self.fontwh  = scalefont(self.display, self.wh, text, "arial.ttf")
-            print("TrackFrame.draw> Scale Down w,h %s, charw %d, len  <%d>, fontwh %s" % ( self.wh, self.charw,len(text), self.fontwh) )
+            print("TrackFrame.draw> Scale Down w,h %s, text len  <%d>, fontwh %s" % ( self.wh,len(text), self.fontwh) )
 
             if self.fontwh[1]< (self.h/2)-1:
                 self.font  = make_font("arial.ttf", (self.h/2)-1)
@@ -441,7 +431,7 @@ class SpectrumFrame(Frame):
     - scale is used to determine how wide the frame is as a % of the parent frame
     - channel 'left' or 'right' selects the audio channel and screen alignment
     """
-    BARGAP    = 4  # between bars
+    BARGAP    = 1.25  # pc of barwidth
     BARWMIN   = 1
     BARWMAX   = 6
 
@@ -468,11 +458,12 @@ class SpectrumFrame(Frame):
             self.bar_freqs = platform.createBands(spacing)
             self.bars      = len(self.bar_freqs)
             for barw in range(SpectrumFrame.BARWMAX, SpectrumFrame.BARWMIN, -1):
-                self.max_bars   = int(self.w/(SpectrumFrame.BARGAP+barw))
+                self.bar_gap    = int(barw * SpectrumFrame.BARGAP)
+                self.max_bars   = int(self.w/(self.bar_gap+barw))
                 if  self.bars <= self.max_bars: break
             if  self.bars <= self.max_bars: break
         self.barw = barw
-        print("SpectrumFrame.__init__> Selected spectrum: max bars=%d, octave spacing=1/%d, num bars=%d, width=%d" % (self.max_bars, spacing, self.bars, self.barw))
+        print("SpectrumFrame.__init__> Selected spectrum: max bars=%d, octave spacing=1/%d, num bars=%d, width=%d, gap=%d" % (self.max_bars, spacing, self.bars, self.barw, self.bar_gap))
 
     def draw(self, basis):
         if self.channel=='right':
@@ -484,11 +475,11 @@ class SpectrumFrame(Frame):
         freq_power = self.platform.packFFT(self.bar_freqs, self.channel)
         for i in range(0, self.bars):
             self.display.drawFrameBar(basis, self, x, freq_power[i], self.barw, c )
-            x += SpectrumFrame.BARGAP+self.barw
+            x += self.bar_gap+self.barw
 
     @property
     def width(self):
-        return self.bars * (SpectrumFrame.BARGAP+self.barw)
+        return self.bars * (self.bar_gap+self.barw)
 
 class VU2chFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
@@ -518,8 +509,8 @@ class Spectrum2chFrame(Frame):
 class SpectrumStereoFrame(Frame):
     def __init__(self, bounds, platform, display, scale, H):
         Frame.__init__(self, bounds, platform, display, scalers=(scale, 1.0), Halign=H)
+        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 4, colour='grey' )
         self += SpectrumFrame(self.coords, platform, display, 'left', 1.0, )
-        self += SpectrumFrame(self.coords, platform, display, 'right', 1.0, 2, colour='red' )
         self.check()
 
 
@@ -552,8 +543,8 @@ class SpectrumScreen(Frame):
     """ Volume/Source on left - Spectrum on left - one channel """
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
-        self += VolumeSourceFrame(display.boundary, platform, display, 0.3, 'right')
-        self += SpectrumFrame(display.boundary, platform, display, 'left', 0.7)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'right')
+        self += SpectrumFrame(display.boundary, platform, display, 'left', 0.8)
         self.check()
 
 class FullSpectrumScreen(Frame):
@@ -567,8 +558,8 @@ class StereoSpectrumScreen(Frame):
     """ Volume/Source on left - Stereo Spectrum overlaid """
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
-        self += VolumeSourceFrame(display.boundary, platform, display, 0.2, 'right')
-        self += SpectrumStereoFrame(display.boundary, platform, display, 0.8, 'left')
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.3, 'right')
+        self += SpectrumStereoFrame(display.boundary, platform, display, 0.7, 'left')
         self.check()
 
 class ScreenTitle(Frame):
