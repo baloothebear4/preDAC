@@ -128,7 +128,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'StreamerMeta'
+        self.baseScreen     = 'stereoSpectrum'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """

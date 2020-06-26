@@ -54,7 +54,7 @@ def scalefont(display, wh, text, font, min=3):
         fontwh = display.textsize(text, font)
         fontsize -= 1
         if fontsize < min: break
-    print("scalefont> font size %d, fontwh %s, text<%s>" % (fontsize, fontwh, text))
+    # print("scalefont> font size %d, fontwh %s, text<%s>" % (fontsize, fontwh, text))
     return font, fontwh
 
 class OLEDdriver(canvas):

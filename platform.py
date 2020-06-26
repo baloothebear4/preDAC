@@ -17,6 +17,7 @@ from oleddriver   import internalOLED, frontOLED
 from processaudio import AudioProcessor
 from keyevents    import KeyEvent   # used for testing without all HW attached
 from rotenc       import RotaryEncoder
+from rotary       import RotaryEncoder2
 from pcf8574      import PCF8574
 from streamerif   import StreamerInterface
 
@@ -249,27 +250,38 @@ class ControlBoard:
 
     OFFDETECTPIN = 23
     off          = 0     # signal sent to Control Board to power off
+    # LHS Knob
     # PIN_A        = 27 	# Pin 10
     # PIN_B        = 22	# Pin 8
     # BUTTON       = 17	# Pin 7
 
-    PIN_A        = 16
-    PIN_B        = 26
-    BUTTON       = 13
+    # RHS Knob
+    # PIN_A        = 16
+    # PIN_B        = 26
+    # BUTTON       = 13
+    KNOBS        = { 'RHS': [16, 26, 13, '/dev/input/event2'], \
+                     'LHS': [27, 22, 17, '/dev/input/event0'] }
+    PIN_A        = 0
+    PIN_B        = 1
+    BUTTON       = 2
+    DEVICE       = 3
+    VOL_KNOB     = 'RHS'
+    CTRL_KNOB    = 'LHS'
 
     def __init__(self, events):
         self.events = events
+
         """ set up the button shutdown """
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(ControlBoard.OFFDETECTPIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(ControlBoard.OFFDETECTPIN, GPIO.FALLING, callback=self.shutdown)
 
         """ set up the controller knob events to change the source and menus """
-        self.controllerKnob = RotaryEncoder( ControlBoard.PIN_A, ControlBoard.PIN_B, ControlBoard.BUTTON, self.controlKnobEvent )
+        self.controllerKnob = RotaryEncoder2( ControlBoard.KNOBS[ControlBoard.CTRL_KNOB], self.controlKnobEvent, (-10,10,0) )
 
         print("ControlBoard.__init__ > ready")
 
-    def shutdown(self,event):
+    def shutdown(self, event):
         print("ControlBoard.shutdown > shutdown request received", event)
         self.mute()
         self.events.Platform('shutdown')
@@ -280,6 +292,7 @@ class ControlBoard:
 
     def controlKnobEvent(self, event):
         """  Callback routine to handle Control Knob events """
+        print("ControlBoard.controlKnobEvent> event %d" % (event))
         if event == RotaryEncoder.CLOCKWISE:
             self.events.CtrlTurn('clockwise')
         elif event == RotaryEncoder.ANTICLOCKWISE:
@@ -402,21 +415,23 @@ class VolumeBoard(PCF8574, Volume):
     # PIN_B        = 26
     # BUTTON       = 13
 
-    PIN_A        = 27 	# Pin 10
-    PIN_B        = 22	# Pin 8
-    BUTTON       = 17	# Pin 7
+    # KNOBS are defined in the ControlBoard class
+    # PIN_A        = 27 	# Pin 10
+    # PIN_B        = 22	# Pin 8
+    # BUTTON       = 17	# Pin 7
 
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 40
+    DEFAULT_VOL  = 48
 
     """ Map of the volume relay step to the i2c pin """
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
 
     def __init__(self, events):
         self.i2c2         = PCF8574(VolumeBoard.i2c2_port, VolumeBoard.i2c2_address)
-        self.volknob      = RotaryEncoder(VolumeBoard.PIN_A, VolumeBoard.PIN_B, VolumeBoard.BUTTON, self.volKnobEvent )
+        self.volknob      = RotaryEncoder2(ControlBoard.KNOBS[ControlBoard.VOL_KNOB], self.volKnobEvent,\
+                                (VolumeBoard.MIN_VOLUME, VolumeBoard.MAX_VOLUME, VolumeBoard.DEFAULT_VOL))
         Volume.__init__(self)   # volume data model
         self.events       = events
 
@@ -429,18 +444,21 @@ class VolumeBoard(PCF8574, Volume):
 
         print("VolumeBoard._init__ > ready", self.volumestatus())
 
-    def volKnobEvent(self, a):
+    def volKnobEvent(self, event):
         """ callback if the vol knob is turned or the button is pressed """
-        """ ** Need to decide whether the volume write can be done in the interrupt? """
-        if a == RotaryEncoder.CLOCKWISE:
+
+        if event == RotaryEncoder.CLOCKWISE:
             if self.demandVolume < VolumeBoard.MAX_VOLUME+1: self.demandVolume +=1
             self.events.VolKnob('vol_change')
-        elif a == RotaryEncoder.ANTICLOCKWISE:
+
+        elif event == RotaryEncoder.ANTICLOCKWISE:
             if self.demandVolume > VolumeBoard.MIN_VOLUME: self.demandVolume -=1
             self.events.VolKnob('vol_change')
-        elif a == RotaryEncoder.BUTTONUP:
+
+        elif event == RotaryEncoder.BUTTONUP:
             pass
-        elif a == RotaryEncoder.BUTTONDOWN:
+
+        elif event == RotaryEncoder.BUTTONDOWN:
             if self.volume_raw == VolumeBoard.MIN_VOLUME:
                 # unmute
                 self.demandVolume = self.premuteVolume
@@ -451,7 +469,7 @@ class VolumeBoard(PCF8574, Volume):
                 self.demandVolume = VolumeBoard.MIN_VOLUME
                 self.events.VolKnob('vol_change')
 
-        print("VolumeBoard.volKnobEvent >", a, self.demandVolume)
+        print("VolumeBoard.volKnobEvent >", event, self.demandVolume)
 
     def volumeUp(self):
         self.volKnobEvent(RotaryEncoder.CLOCKWISE)
@@ -537,7 +555,7 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, \
 
             """ set up the default source and unmute """
             self.setSource(self.State['source'])
-            
+
             print("Platform.__init__>\n", self)
 
         else:

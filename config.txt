@@ -1,0 +1,36 @@
+#disable_splash=1
+#disable_overscan=1
+#hdmi_drive=2
+#hdmi_blanking=1
+#dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=audio=off
+
+#disable_splash=1
+#hdmi_drive=2
+#disable_overscan=1
+
+dtparam=audio=off
+dtoverlay=pi3-disable-wifi
+dtoverlay=pi3-disable-bt
+
+# preDAC v2.0 configs for rotary encoders
+#
+# v2.0 all serial interfaces on
+dtparam=i2c_arm=on
+dtparam=i2s=on
+dtparam=spi=on
+
+# v2.0 load Fe-Pi driver
+dtoverlay=fe-pi-audio
+
+# v2.0 setup ir remote and power off
+dtoverlay=gpio-ir,gpio_pin=6
+dtoverlay=gpio-poweroff,gpiopin=4,active_low
+
+#   volume knob (RHS)
+dtoverlay=rotary-encoder,pin_a=26,pin_b=16,relative_axis=1,steps-per-period=2
+
+#   control knob (LHS)
+#dtoverlay=rotary-encoder,pin_a=22,pin_b=27,relative_axis=1,steps-per-period=2
+

@@ -25,11 +25,13 @@ class RotaryEncoder:
     BUTTONUP        = 4
 
     # Initialise rotary encoder object
-    def __init__(self, pinA, pinB, button, callback):
-        self.pinA       = pinA
-        self.pinB       = pinB
-        self.button     = button
+    def __init__(self, knob, callback, minmax = (0,0,0)):
+        self.pinA       = knob[0]
+        self.pinB       = knob[1]
+        self.button     = knob[2]
         self.callback   = callback
+        self.value      = minmax[2]
+        self.minmax     = minmax
 
         # new
         self.aState     = 0
@@ -55,6 +57,8 @@ class RotaryEncoder:
         GPIO.add_event_detect(self.pinB, GPIO.RISING, callback=self.switch_event, bouncetime=5)
         GPIO.add_event_detect(self.button, GPIO.BOTH, callback=self.button_event, bouncetime=5)
 
+        print("RotaryEncoder.__init__> OK", knob, minmax)
+
 
     def switch_event(self, pin):
 
@@ -73,7 +77,7 @@ class RotaryEncoder:
         else:
         	event = self.BUTTONDOWN
 
-        self.callback(event)
+        self.callback(event) #, self.value)
         self.LockRotary.release()
 
     # Get a switch state
@@ -95,41 +99,45 @@ class RotaryEncoder:
         if self.rotary_a or self.rotary_b:						# Both one active? Yes -> end of sequence
             self.LockRotary.acquire()						# get lock
             if pin == self.pinB:							# Turning direction depends on
+                if self.value < self.minmax[1]: self.value +=1
                 event = RotaryEncoder.CLOCKWISE
             else:										# so depending on direction either
+                if self.value > self.minmax[0]: self.value -=1
                 event = RotaryEncoder.ANTICLOCKWISE
             self.LockRotary.release()						# and release lock
 
         if event == RotaryEncoder.CLOCKWISE or event == RotaryEncoder.ANTICLOCKWISE:
             # print"Counter: ", self.counter, " Event ", event
             self.LockRotary.acquire()
-            self.callback(event)
+            self.callback(event) #, self.value)
             self.LockRotary.release()
 
 # End of RotaryEncoder class
 
 count=0
-def buttonpress(a):
+def buttonpress(a, v):
     global count
 
     if a == RotaryEncoder.CLOCKWISE:
-        count +=1
+        # count +=1
         ev = 'Clockwise'
     elif a == RotaryEncoder.ANTICLOCKWISE:
-        count -=1
+        # count -=1
         ev = 'Anti-clockwise'
     elif a == RotaryEncoder.BUTTONUP:
         ev = 'Button up'
     elif a == RotaryEncoder.BUTTONDOWN:
         ev = 'Button down'
 
-    print("Rot enc event ", ev , count)
+    print("Rot enc event ", a, ev , v)
 
 
 def main():
     '''
     Test harness for the RotaryEncoder and Volume classes
     '''
+    KNOBS        = { 'RHS': [16, 26, 13, '/dev/input/event0'], \
+                     'LHS': [27, 22, 17, '/dev/input/eventTBC'] }
     #volume knob
     PIN_A        = 26
     PIN_B        = 16
@@ -139,7 +147,7 @@ def main():
     # PIN_A        = 22 	# Pin 8
     # PIN_B        = 27	# Pin 10
     # BUTTON       = 17	# Pin 7
-    r      = RotaryEncoder(PIN_A, PIN_B, BUTTON, buttonpress )
+    r      = RotaryEncoder(KNOBS['LHS'], buttonpress, (0, 99, 20) )
 
 
     loops = 0
