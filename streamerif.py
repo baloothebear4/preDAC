@@ -105,7 +105,7 @@ class StreamerInterface(MPDMetaData, Thread):
         """ setup the interface and data model """
         MPDMetaData.__init__(self)
 
-        print("StreamerInterface._init__ > ready. MPD v", self.client.mpd_version)
+        # print("StreamerInterface._init__ > ready. MPD v", self.client.mpd_version)
         # self.start()
 
     def run(self):
@@ -131,7 +131,7 @@ class StreamerInterface(MPDMetaData, Thread):
             try:
                 self.source = source
                 self.client = MPDClient()                 # create client object
-                self.client.timeout = 10                  # network timeout in seconds (floats allowed), default: None
+                self.client.timeout = 0.1                  # network timeout in seconds (floats allowed), default: None
                 self.client.idletimeout = None            # timeout for fetching the result of the idle command is handled seperately, default: None
                 self.client.connect(StreamerInterface.STREAMER_IP[source], 6600) # connect to MPD
                 self.update( self.client.currentsong(), self.client.status())

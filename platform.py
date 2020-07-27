@@ -249,6 +249,7 @@ class ControlBoard:
     # Define GPIO inputs for shutdowna and rotary encoder : in BCM NOT pins
 
     OFFDETECTPIN = 23
+    POWERRELAYSPIN= 26
     off          = 0     # signal sent to Control Board to power off
     # LHS Knob
     # PIN_A        = 27 	# Pin 10
@@ -259,12 +260,15 @@ class ControlBoard:
     # PIN_A        = 16
     # PIN_B        = 26
     # BUTTON       = 13
-    KNOBS        = { 'RHS': [16, 26, 13, '/dev/input/event2'], \
+    KNOBS        = { 'RHS': [16, 7, 13, '/dev/input/event1'], \
                      'LHS': [27, 22, 17, '/dev/input/event0'] }
     PIN_A        = 0
     PIN_B        = 1
     BUTTON       = 2
     DEVICE       = 3
+    ON           = 1
+    OFF          = 0
+    POWER        = { 'on' : ON, 'off': OFF}
     VOL_KNOB     = 'RHS'
     CTRL_KNOB    = 'LHS'
 
@@ -279,7 +283,14 @@ class ControlBoard:
         """ set up the controller knob events to change the source and menus """
         self.controllerKnob = RotaryEncoder2( ControlBoard.KNOBS[ControlBoard.CTRL_KNOB], self.controlKnobEvent, (-10,10,0) )
 
+        """ setup the Relay control PIN """
+        GPIO.setup(ControlBoard.POWERRELAYSPIN, GPIO.OUT)
+
         print("ControlBoard.__init__ > ready")
+
+    def powerAudio(self, state='off'):
+        print("ControlBoard.powerAudio > request received", state)
+        GPIO.output(ControlBoard.POWERRELAYSPIN, ControlBoard.POWER[state])
 
     def shutdown(self, event):
         print("ControlBoard.shutdown > shutdown request received", event)
@@ -288,6 +299,7 @@ class ControlBoard:
 
     def poweroff(self,event=''):
         print("ControlBoard.poweroff ", event)
+        self.stop_capture()
         os.system("sudo poweroff")
 
     def controlKnobEvent(self, event):
@@ -583,9 +595,11 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, \
             print("Platform.__init__> in test mode")
 
     def start_hw(self):
+        self.powerAudio('on')
         self.start_capture()
 
     def stop(self):
+        self.powerAudio('off')
         self.stop_capture()
         self.remotestop()
         self.streamerstop()
@@ -657,23 +671,30 @@ if __name__ == '__main__':
 
     e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
 
+    c = ControlBoard(e)
+    print("Power up")
+    c.powerAudio('on')
+    time.sleep(3)
+    print("Power down")
+    c.powerAudio('off')
 
-    try:
-        """ ir controller test code """
-        irRemote = RemoteController(e)
-
-        e.RemotePress  += RemoteAction    # when the remote controller is pressed
-        irRemote.run()
-        e.RemotePress('test')
-
-        while True:
-            # keyname, updown = irRemote.checkRemoteKeyPress()
-            # if keyname != "no":
-            #     print('%s (%s)' % (keyname, updown))
-            time.sleep(0.01)
-
-    except KeyboardInterrupt:
-        pass
+    #
+    # try:
+    #     """ ir controller test code """
+    #     irRemote = RemoteController(e)
+    #
+    #     e.RemotePress  += RemoteAction    # when the remote controller is pressed
+    #     irRemote.run()
+    #     e.RemotePress('test')
+    #
+    #     while True:
+    #         # keyname, updown = irRemote.checkRemoteKeyPress()
+    #         # if keyname != "no":
+    #         #     print('%s (%s)' % (keyname, updown))
+    #         time.sleep(0.01)
+    #
+    # except KeyboardInterrupt:
+    #     pass
 
     # """ Volume knob test code """
     # v = VolumeBoard()

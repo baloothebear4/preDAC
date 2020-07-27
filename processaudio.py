@@ -22,7 +22,7 @@ from events import Events
 CHANNELS        = 2
 # INFORMAT        = alsaaudio.PCM_FORMAT_S16_LE
 INFORMAT        = pyaudio.paInt16
-RATE            = 33075  # 22050, 24000,
+RATE            = 44100  #33075  # 22050, 24000,
 FRAMESIZE       = int(1024*2.0)
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE

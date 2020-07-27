@@ -67,7 +67,7 @@ class OLEDdriver(canvas):
         self.device     = device
         self.regulator  = framerate_regulator( fps=fps )
         self.device.persist = False
-        self.readtime = []
+        self.readtime   = []
 
     def calcDisplaytime(self,start=True):
         if start:
@@ -274,6 +274,7 @@ class internalOLED(OLEDdriver):
         serial = i2c(port=internalOLED.I2CPORT, address=internalOLED.I2CADDRESS)
         OLEDdriver.__init__(self, device=ssd1306(serial, height=internalOLED.HEIGHT, width=internalOLED.WIDTH), fps=internalOLED.FPS)
 
+        self.font   = make_font("arial.ttf", 11)
         self.testdevice()
         print("internalOLED.__init__> display initialised")
 
@@ -285,6 +286,7 @@ class frontOLED(OLEDdriver):
     def __init__(self):
         driver = spi(port=frontOLED.SPIPORT)
         OLEDdriver.__init__(self, device=ssd1322(driver), fps=frontOLED.FPS)
+        self.font   = make_font("arial.ttf", 14)
 
         self.testdevice()
         print("frontOLED.__init__> initialised")
