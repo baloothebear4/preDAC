@@ -97,7 +97,7 @@ class StreamerInterface(MPDMetaData, Thread):
         Runs in a separate thread so that the idle method is blocking until a
         change in status is received and an Streamer Event is raised
     """
-    STREAMER_IP  = { 'dac': '192.168.1.239', 'streamer': '192.168.1.218' }
+    STREAMER_IP  = { 'dac': '192.168.1.131', 'streamer': '192.168.1.218' }
 
     def __init__(self, events):
         self.events = events
@@ -165,7 +165,10 @@ class StreamerInterface(MPDMetaData, Thread):
 
 
     def streamerplay(self):
-        self.client.play()
+        try:
+            self.client.play()
+        except Exception as e:
+            print("StreamerInterface.streamerplay > failed ", e)
 
     def checkStreamerEvents(self):
         '''

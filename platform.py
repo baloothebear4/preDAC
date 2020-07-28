@@ -149,8 +149,6 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         GPIO.setup(AudioBoard.PHONESDETECTPIN, GPIO.IN)
         GPIO.add_event_detect(AudioBoard.PHONESDETECTPIN, GPIO.BOTH, callback=self.phonesdetect)
 
-
-
         print("AudioBoard.__init__ > ready", self.audiostatus())
 
     @property
@@ -206,11 +204,11 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         self.i2c1.port[ AudioBoard.audioBoardMap['mute'][AudioBoard.PIN] ] = AudioBoard.UNMUTE
         print("AudioBoard.unmute ")
 
-    def invertMute(self, volume):
+    def invertMute(self):
         """ unmute the audio board"""
-        if self.State['mute'] == AudioBoard.ON and volume > 0:
+        if self.State['mute'] == AudioBoard.ON:
             self.unmute()
-        elif self.State['mute'] == AudioBoard.OFF and volume == 0:
+        elif self.State['mute'] == AudioBoard.OFF:
             self.mute()
 
     def gain(self, on=True):
@@ -238,7 +236,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
         return self.State
 
     def audiostatus(self):
-        return "AudioBoard> state %s, active %s, ports %s" % (self.State, self.activeSource, self.i2c1.port)
+        return "AudioBoard> state %s, active %s, \n            ports %s" % (self.State, self.activeSource, self.i2c1.port)
 
 class ControlBoard:
     """
@@ -435,7 +433,8 @@ class VolumeBoard(PCF8574, Volume):
     VOLUMESTEPS  = 7
     MIN_VOLUME   = 0
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
-    DEFAULT_VOL  = 48
+    DEFAULT_VOL  = 51
+    HWSETTLETIME = 0.6   #after powering up the Volume and Source select relays, let them settle
 
     """ Map of the volume relay step to the i2c pin """
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
@@ -451,16 +450,13 @@ class VolumeBoard(PCF8574, Volume):
         for i in range(len(self.i2c2.port)):
             self.i2c2.port[ i ] = VolumeBoard.OFF
 
-        """ set up the default volume """
-        self.setVolume(VolumeBoard.DEFAULT_VOL)
-
         print("VolumeBoard._init__ > ready", self.volumestatus())
 
     def volKnobEvent(self, event):
         """ callback if the vol knob is turned or the button is pressed """
 
         if event == RotaryEncoder.CLOCKWISE:
-            if self.demandVolume < VolumeBoard.MAX_VOLUME+1: self.demandVolume +=1
+            if self.demandVolume < VolumeBoard.MAX_VOLUME: self.demandVolume +=1
             self.events.VolKnob('vol_change')
 
         elif event == RotaryEncoder.ANTICLOCKWISE:
@@ -471,15 +467,16 @@ class VolumeBoard(PCF8574, Volume):
             pass
 
         elif event == RotaryEncoder.BUTTONDOWN:
-            if self.volume_raw == VolumeBoard.MIN_VOLUME:
-                # unmute
-                self.demandVolume = self.premuteVolume
-                self.events.VolKnob('vol_change')
-            else:
-                # mute
-                self.premuteVolume = self.volume_raw
-                self.demandVolume = VolumeBoard.MIN_VOLUME
-                self.events.VolKnob('vol_change')
+            self.events.VolKnob('togglemute')
+            # if self.volume_raw == VolumeBoard.MIN_VOLUME:
+            #     # unmute
+            #     self.demandVolume = self.premuteVolume
+            #     self.events.VolKnob('vol_change')
+            # else:
+            #     # mute
+            #     self.premuteVolume = self.volume_raw
+            #     self.demandVolume = VolumeBoard.MIN_VOLUME
+            #     self.events.VolKnob('vol_change')
 
         print("VolumeBoard.volKnobEvent >", event, self.demandVolume)
 
@@ -565,8 +562,7 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, \
                     print("Platform.__init__> failed to start %s > %s" % (hw.__name__, e))
             self.nohw = False
 
-            """ set up the default source and unmute """
-            self.setSource(self.State['source'])
+
 
             print("Platform.__init__>\n", self)
 
@@ -596,7 +592,14 @@ class Platform(VolumeBoard, ControlBoard, AudioBoard, \
 
     def start_hw(self):
         self.powerAudio('on')
+        time.sleep(Platform.HWSETTLETIME)
+
+        """ set up the default volume """
+        self.setVolume(VolumeBoard.DEFAULT_VOL)
+        """ set up the default source and unmute if signal detected """
+        self.setSource(self.State['source'])
         self.start_capture()
+
 
     def stop(self):
         self.powerAudio('off')

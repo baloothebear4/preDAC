@@ -202,6 +202,9 @@ class Controller:
         elif e =='unmute':
             self.platform.unmute() #unmute the audio board
 
+        elif e =='togglemute':
+            self.platform.invertMute() #unmute the audio board            
+
         elif e =='Button up':
             #detected that the mute button has raised - no action
             pass

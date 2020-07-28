@@ -104,7 +104,11 @@ class TextFrame(Frame):
 
 class VolumeTextFrame(TextFrame):
     def draw(self, basis):
-        vol = self.platform.volume * 100
+        if self.platform.muteState:
+            vol = 0
+        else:
+            vol = self.platform.volume * 100
+
         self.display.drawFrameCentredText(basis, self, "%2d" % vol, self.font)
 
 class SourceTextFrame(TextFrame):
@@ -150,7 +154,7 @@ class TrackFrame(TextFrame):
             self.rawtext   = text
 
             self.font, self.fontwh  = scalefont(self.display, self.wh, text, "arial.ttf")
-            print("TrackFrame.draw> Scale Down w,h %s, text len  <%d>, fontwh %s" % ( self.wh,len(text), self.fontwh) )
+            # print("TrackFrame.draw> Scale Down w,h %s, text len  <%d>, fontwh %s" % ( self.wh,len(text), self.fontwh) )
 
             if self.fontwh[1]< (self.h/2)-1:
                 self.font  = make_font("arial.ttf", (self.h/2)-1)
@@ -159,7 +163,7 @@ class TrackFrame(TextFrame):
                 textlines  = wrap(text, width=self.charw)
                 print(textlines)
                 if len(textlines)>0: text       = textlines[0].center(self.charw) + '\n' + textlines[1].center(self.charw)
-                print("TrackFrame.draw> Wrap w,h %s, charw %d, len  <%d>" % ( self.wh, self.charw,len(self.text)) )
+                # print("TrackFrame.draw> Wrap w,h %s, charw %d, len  <%d>" % ( self.wh, self.charw,len(self.text)) )
 
             # print("TrackFrame.draw> w,h : text size for:", self.w, self.h, basis.textsize(text, self.font), text)
             self.text   = text
