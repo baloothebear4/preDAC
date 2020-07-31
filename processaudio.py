@@ -27,7 +27,7 @@ FRAMESIZE       = int(1024*2.0)
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE
 
-SILENCESAMPLES  = 5 / SAMPLEPERIOD    #5 seconds worth of samples
+SILENCESAMPLES  = 7 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
 
@@ -44,7 +44,7 @@ DYNAMICRANGE    = 80     # Max dB
 SILENCETHRESOLD = 0.02   # Measured from VU Noise Floor + VU offset
 
 # VU calibration and scaling
-PeakRange = DYNAMICRANGE - 25 # was 50 antificipated dB range
+PeakRange = DYNAMICRANGE - 15 # was 50 antificipated dB range
 VURange   = DYNAMICRANGE - 20
 PeakOff   = -(RMSNOISEFLOOR + 10) # lower limit to display
 VUOff     = -(RMSNOISEFLOOR + 10) # was 40
@@ -198,10 +198,10 @@ class AudioProcessor(AudioData):
         signal_level = self.vu['left']
         ave_level    = self.silence.average(signal_level)
 
-        if self.signal_detected and ave_level < SILENCETHRESOLD:
+        if ave_level < SILENCETHRESOLD:
             print("ProcessAudio.detectSilence> Silence at", ave_level, signal_level)
             self.signal_detected = False
-            self.silence.reset('silence')
+            self.silence.reset('signal')  # clear the window to keep checking for Silence
             self.events.Audio('silence_detected')
         elif not self.signal_detected and signal_level >= SILENCETHRESOLD:
             print("ProcessAudio.detectSilence> Signal at", ave_level, signal_level)
