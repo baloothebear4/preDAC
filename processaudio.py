@@ -30,8 +30,6 @@ SAMPLEPERIOD    = FRAMESIZE/RATE
 SILENCESAMPLES  = 5 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
-RMSNOISEFLOOR   = -66  #dB
-SILENCETHRESOLD = 0.02
 
 WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
@@ -39,6 +37,17 @@ OCTAVE          = 3
 NUMPADS         = 0
 BINBANDWIDTH    = RATE/(FRAMESIZE + NUMPADS) #ie 43.5 Hz for 44.1kHz/1024
 DCOFFSETSAMPLES = 200
+
+
+RMSNOISEFLOOR   = -70    # dB
+DYNAMICRANGE    = 80     # Max dB
+SILENCETHRESOLD = 0.02   # Measured from VU Noise Floor + VU offset
+
+# VU calibration and scaling
+PeakRange = DYNAMICRANGE - 25 # was 50 antificipated dB range
+VURange   = DYNAMICRANGE - 20
+PeakOff   = -(RMSNOISEFLOOR + 10) # lower limit to display
+VUOff     = -(RMSNOISEFLOOR + 10) # was 40
 
 class WindowAve:
     """ Class to find the moving average of a set of window of points """
@@ -244,13 +253,7 @@ class AudioProcessor(AudioData):
 
     def VU(self,channel):
         """ normalise to 0-1 """
-
-        PeakRange = 50  # antificipated dB range
-        VURange   = 45
-        PeakOff   = 40  # lower limit to display
-        VUOff     = 40
-
-
+        # print("channel power = ", 10*math.log(self.rmsPower(self.samples[channel]), 10))
         peak = 10*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
         vu   = self.floor(  (10*math.log( self.rmsPower(self.samples[channel]), 10)+VUOff)/VURange, 0)
         # print("vu ", vu, "peak", peak)
