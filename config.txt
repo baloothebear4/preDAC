@@ -21,16 +21,18 @@ dtparam=i2c_arm=on
 dtparam=i2s=on
 dtparam=spi=on
 
+# v2.0 hard turnoff power once the Pi has shutdown
+dtoverlay=gpio-poweroff,gpiopin=4,active_low
+
 # v2.0 load Fe-Pi driver
 dtoverlay=fe-pi-audio
 
 # v2.0 setup ir remote and power off
 dtoverlay=gpio-ir,gpio_pin=6
-dtoverlay=gpio-poweroff,gpiopin=4,active_low
 
 #   volume knob (RHS)
-dtoverlay=rotary-encoder,pin_a=26,pin_b=16,relative_axis=1,steps-per-period=2
+dtoverlay=rotary-encoder,pin_a=5,pin_b=16,relative_axis=1,steps-per-period=1
 
 #   control knob (LHS)
-#dtoverlay=rotary-encoder,pin_a=22,pin_b=27,relative_axis=1,steps-per-period=2
+dtoverlay=rotary-encoder,pin_a=22,pin_b=27,relative_axis=1,steps-per-period=1
 
