@@ -17,6 +17,7 @@
 
 
 import time, threading
+import evdev
 from pyky040 import pyky040
 import RPi.GPIO as GPIO
 
@@ -36,7 +37,7 @@ class RotaryEncoder2:
         self.event_callback   = event_callback
         self.value            = minmax[2]
 
-        self.rotenc = pyky040.Encoder(device=knob[3])
+        self.rotenc = pyky040.Encoder(device=self.matchInputDevice(knob[3]))
 
         """ setup Knob button """
         GPIO.setmode(GPIO.BCM)
@@ -75,6 +76,15 @@ class RotaryEncoder2:
 
         self.event_callback(event) #, int(self.value))
         # self.LockRotary.release()
+
+    def matchInputDevice(self, deviceName):
+        # returns the device event channel
+        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+        for device in devices:
+            if device.name == deviceName:
+                return device.path
+        print("RotaryEncoder2.matchInputDevice> deviceName not found>", deviceName)
+        return 0
 
 # End of RotaryEncoder2 class
 

@@ -258,8 +258,10 @@ class ControlBoard:
     # PIN_A        = 16
     # PIN_B        = 26
     # BUTTON       = 13
-    KNOBS        = { 'RHS': [16, 7, 13, '/dev/input/event1'], \
-                     'LHS': [27, 22, 17, '/dev/input/event0'] }
+    # KNOBS        = { 'RHS': [16, 7, 13, '/dev/input/event1'], \
+    #                  'LHS': [27, 22, 17, '/dev/input/event0'] }
+    KNOBS        = { 'RHS': [16, 7, 13, 'rotary@5'], \
+                     'LHS': [27, 22, 17, 'rotary@16'] }
     PIN_A        = 0
     PIN_B        = 1
     BUTTON       = 2
@@ -675,6 +677,7 @@ if __name__ == '__main__':
     e = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
 
     c = ControlBoard(e)
+    v = VolumeBoard(e)
     print("Power up")
     c.powerAudio('on')
     time.sleep(3)
