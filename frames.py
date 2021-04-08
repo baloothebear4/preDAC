@@ -35,6 +35,21 @@ class VolumeSourceFrame(Frame):
     def width(self):
         return
 
+class RecordFrame(Frame):
+    """
+        Displays the volume as a percentage with the source underneath
+        - has a width determined by the scale
+    """
+    def __init__(self, bounds, platform, display, scale):
+        Frame.__init__(self, display.boundary, platform, display, (scale,1.0), 'middle', 'left')
+        self +=  TextFrame( display.boundary, platform, display, 'middle', 1.0, 'Recording', X=0.6, H='left')
+        # self += OutlineFrame(self.coords, platform, display)
+        self.check()
+
+    @property
+    def width(self):
+        return
+
 class dbVolumeSourceFrame(Frame):
     """
         Displays the volume as a percentage with the source underneath
@@ -73,8 +88,8 @@ class TextFrame(Frame):
     """
 
 
-    def __init__(self, bounds, platform, display, V, Y, text=''):
-        Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(1.0,Y), Valign=V, Halign='centre')
+    def __init__(self, bounds, platform, display, V, Y, text='', X=1.0,H='centre'):
+        Frame.__init__(self, bounds=bounds, platform=platform, display=display, scalers=(X,Y), Valign=V, Halign=H)
         # scale the font so the widest fits
         self.text                  = text
         self.rawtext               = text
@@ -597,6 +612,13 @@ class VolChangeScreen(Frame):
     def __init__(self, platform, display):
         Frame.__init__(self, display.boundary, platform, display)
         self += VolumeAmountFrame(display.boundary, platform, display, 0.6)
+        self += VolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
+        self.check()
+
+class RecordingScreen(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += RecordFrame( display.boundary, platform, display, 0.3)
         self += VolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
         self.check()
 

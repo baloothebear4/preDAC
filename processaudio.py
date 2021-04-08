@@ -13,9 +13,10 @@
 
 """
 
-import struct, time, math
+import struct, time, math, os
 import numpy as np
 import pyaudio
+import wave
 from events import Events
 
 # constants
@@ -30,6 +31,11 @@ SAMPLEPERIOD    = FRAMESIZE/RATE
 SILENCESAMPLES  = 7 / SAMPLEPERIOD    #5 seconds worth of samples
 PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
 
+RECORDSTATE     = False
+RECORDTIME      = 30 * 60 / SAMPLEPERIOD / CHANNELS # failfase to stop the disk filling up
+RECORDPATH      = "/home/pi/preDAC/rec/"
+RECORDFILESUFFIX = "preDAC"
+RECORDINGS_PATTERN = RECORDPATH + RECORDFILESUFFIX + "-%s.wav"
 
 WINDOW          = 7 # 4 = Hanning
 FIRSTCENTREFREQ = 31.25        # Hz
@@ -44,7 +50,7 @@ DYNAMICRANGE    = 80     # Max dB
 SILENCETHRESOLD = 0.02   # Measured from VU Noise Floor + VU offset
 
 # VU calibration and scaling
-PeakRange = DYNAMICRANGE - 15 # was 50 antificipated dB range
+PeakRange = DYNAMICRANGE - 5 # was 50 antificipated dB range
 VURange   = DYNAMICRANGE - 20
 PeakOff   = -(RMSNOISEFLOOR + 10) # lower limit to display
 VUOff     = -(RMSNOISEFLOOR + 10) # was 40
@@ -106,6 +112,8 @@ class AudioProcessor(AudioData):
         # set up audio input
         self.recorder = pyaudio.PyAudio()
 
+        self.recordingState = RECORDSTATE
+        self.recording      = []
 
         AudioData.__init__(self)
 
@@ -117,7 +125,7 @@ class AudioProcessor(AudioData):
 
         self.window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
         # self.window     = np.blackman(FRAMESIZE)
-        print("AudioProcessor.__init__> ready and reading from soundcard ", self.recorder.get_default_input_device_info()['name'])
+        print("AudioProcessor.__init__> ready and reading from soundcard %s, Recording is %s " % (self.recorder.get_default_input_device_info()['name'], RECORDSTATE))
 
     def start_capture(self):
         try:
@@ -141,6 +149,7 @@ class AudioProcessor(AudioData):
         data        = np.frombuffer(in_data, dtype=np.int16 )/maxValue
         self.samples['left']  = data[0::2]
         self.samples['right'] = data[1::2]
+        self.record(in_data)
         self.events.Audio('capture')
         # self.calcReadtime(False)
         return (in_data, pyaudio.paContinue)
@@ -175,6 +184,8 @@ class AudioProcessor(AudioData):
                 self.calibrate(self.samples['left'])
                 self.calibrate(self.samples['right'])
 
+                self.record(raw_data)
+
                 break  # all good no data overruns detected
 
             except Exception as e:
@@ -183,6 +194,71 @@ class AudioProcessor(AudioData):
                 retry += 1
 
         self.calcReadtime(False)
+
+    def start_recording(self):
+        self.recordingState = True
+
+    def stop_recording(self):
+        self.recordingState = False
+        self.saveRecording()
+        self.recording = []
+        self.events.Audio('recording_stopped')
+
+    def record(self, data):
+        if self.recordingState:
+            self.recording.append(data)
+
+            if len(self.recording) >  RECORDTIME:
+                self.stop_recording()
+
+            elif len(self.recording) % SAMPLEPERIOD == 1:
+                print("AudioProcessor.record> recorded %fs audio " % len(self.recording)/SAMPLEPERIOD )
+
+    def saveRecording(self):
+        # Save the recorded data as a WAV file
+        recordfile = self.find_next_file( RECORDINGS_PATTERN )
+        print('Finished recording to ', recordfile)
+        try:
+            # bits = self.recorder.get_sample_size(INFORMAT)
+            # wf = PyWave.open(recordfile, mode='w', channels = CHANNELS, frequency = RATE, bits_per_sample = bits, format = INFORMAT)
+            wf = wave.open(recordfile, 'wb')
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(self.recorder.get_sample_size(INFORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(self.recording))
+
+            wf.close()
+        except Exception as e:
+            print("AudioProcessor.save_recording> ", e)
+
+
+    def find_next_file(self, path_pattern):
+        """
+        Finds the next free path in an sequentially named list of files
+
+        e.g. path_pattern = 'file-%s.txt':
+
+        file-1.txt
+        file-2.txt
+        file-3.txt
+
+        Runs in log(n) time where n is the number of existing files in sequence
+        """
+        i = 1
+
+        # First do an exponential search
+        while os.path.exists(path_pattern % i):
+            i = i * 2
+
+        # Result lies somewhere in the interval (i/2..i]
+        # We call this interval (a..b] and narrow it down until a + 1 = b
+        a, b = (i // 2, i)
+        while a + 1 < b:
+            c = (a + b) // 2 # interval midpoint
+            a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+
+        return path_pattern % b
+
 
     def process(self):
         self.bins['left']     = self.calcFFT(self.samples['left'])
@@ -195,7 +271,7 @@ class AudioProcessor(AudioData):
 
     def detectSilence(self):
         # use hysterises - quick to detect a signal, slow to detect silience (5 seconds)
-        signal_level = self.vu['left']
+        signal_level = self.vu['left'] + self.vu['right']
         ave_level    = self.silence.average(signal_level)
 
         if ave_level < SILENCETHRESOLD:

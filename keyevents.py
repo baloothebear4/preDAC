@@ -43,7 +43,11 @@ class KeyEvent:
                 self.events.CtrlTurn('clockwise')
             elif line == "p" :
                 self.events.CtrlPress('down')
+            elif line == "e" :
+                self.events.Platform('exit')
             elif line == "s" :
                 print (self)
-            elif line >= "1"  and line <= "6":
+            elif line >= "0"  and line <= "5":
                 self.setSource( self.sourceLogic()[int(line)])
+            else:
+                print("KeyEvent.checkKeys: invalid key ", line)

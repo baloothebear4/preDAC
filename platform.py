@@ -379,10 +379,8 @@ class RemoteController():
                     self.events.RemotePress('stop')
                 elif words[2] == "KEY_PAUSE" and words[1] == "00":
                     self.events.RemotePress('pause')
-                    # print("RemoteController.checkRemoteKeyPress> pause key pressed, no linked event")
-                elif words[2] == "KEY_PLAY" and words[1] == "00":
-                    # print("RemoteController.checkRemoteKeyPress> play key pressed, no linked event")
-                    self.events.RemotePress('play')
+                elif words[2] == "KEY_PLAY" and words[1] == "00":  # 05 means that it needs to held down for a while
+                    self.events.RemotePress('record')
             # else:
             #     print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
 
@@ -437,6 +435,7 @@ class VolumeBoard(PCF8574, Volume):
     MAX_VOLUME   = 127   #""" NB: this is 2xdB """
     DEFAULT_VOL  = 51
     HWSETTLETIME = 0.6   #after powering up the Volume and Source select relays, let them settle
+    RELAYSETTLETIME = 0.001
 
     """ Map of the volume relay step to the i2c pin """
     RELAYMAP       = ( 0, 1, 2, 3, 4, 5, 6)
@@ -526,10 +525,25 @@ class VolumeBoard(PCF8574, Volume):
             relays[i] = (volume & mask == mask)
             mask = mask << 1
 
+        """ set up for the volume set algorithm """
+        if volume < self.volume_raw:
+            print("VolumeBoard.setVolume> volume down, MSB off first")
+            for i in range(VolumeBoard.VOLUMESTEPS-1, -1, -1):
+                self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = relays[i]
+                time.sleep(VolumeBoard.RELAYSETTLETIME)
+                # print("VolumeBoard.setVolume> relay %d = %d" % (i, self.i2c2.port[ VolumeBoard.RELAYMAP[i] ]))
+        else:
+            print("VolumeBoard.setVolume> volume up, MSB off last")
+            for i in range(0, VolumeBoard.VOLUMESTEPS, 1):
+                self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = relays[i]
+                time.sleep(VolumeBoard.RELAYSETTLETIME)
+                # print("VolumeBoard.setVolume> relay %d = %d" % (i, self.i2c2.port[ VolumeBoard.RELAYMAP[i] ]))
 
-        """ set the relays accordingly, NB: this does NOT attempt on/off optimisation """
+
+        """ base algorithm - deprecated set the relays accordingly, NB: this does NOT attempt on/off optimisation
         for i, r in enumerate(relays):
             self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = r
+        """
 
         self.volume_raw = volume
         print("VolumeBoard.setVolume> demand %d, volume %d, \nVolumeBoard.setVolume>steps %s, \nVolumeBoard.setVolume>ports %s" % (self.demandVolume, self.volume_raw, relays, self.i2c2.port))

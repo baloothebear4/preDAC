@@ -87,7 +87,7 @@ class testScreen5(Frame):
 def frametest(display):
 
     # frames = (VolumeAmountFrame, TextFrame, MenuFrame, SourceIconFrame, VUFrame, SpectrumFrame)   # create a list of all screens to test one by one
-    scaled_frames = (VUVFrame, SpectrumFrame)
+    scaled_frames = (RecordingScreen)
     # frames = (VU2chFrame, VUV2chFrame, Spectrum2chFrame)
     limits = ((0.3,"white"), (0.6,"grey"), (0.8,"red"))
     events          = Events(( 'Platform', 'CtrlTurn', 'CtrlPress', 'VolKnob', 'Audio', 'RemotePress'))
@@ -117,27 +117,27 @@ def frametest(display):
     # a = testScreen1(p, d)
     # print( "%s initialised: %s" % (type(f).__name__, a) )
 
-    import math
-    a = MetersAScreen(p, d)
+    # import math
+    # a = MetersAScreen(p, d)
+    # d.draw(a)
+    # for _ in range(0, 10):
+    #     for x in range(0,360,10):
+    #
+    #         p.vu['left'] = math.pow(math.sin(x),2)
+    #         p.vu['right'] = math.pow(math.cos(x),2)
+    #         print("x =",x, p.vu)
+    #         d.draw(a)
+    #         time.sleep(0.1)
+    #
+    # print( "Drawn: %s" % ( a) )
+    # time.sleep(5)
+
+    #
+    #
+    a = RecordingScreen(p, d)
+    print( "RecordingScreen initialised: ", a, p )
     d.draw(a)
-    for _ in range(0, 10):
-        for x in range(0,360,10):
-
-            p.vu['left'] = math.pow(math.sin(x),2)
-            p.vu['right'] = math.pow(math.cos(x),2)
-            print("x =",x, p.vu)
-            d.draw(a)
-            time.sleep(0.1)
-
-    print( "Drawn: %s" % ( a) )
     time.sleep(5)
-
-    #
-    #
-    # a = testScreen(p, d)
-    # print( "testScreen initialised: ", a, p )
-    # p.internaldisplay.draw(a)
-    # time.sleep(3)
     #
     # a = testVUScreen(p, d, 0.6)
     # print( "VUScreen initialised: ", a, p )
@@ -280,7 +280,7 @@ def geometrytest():
 # end geometry test
 if __name__ == "__main__":
     try:
-        geometrytest()
+        # geometrytest()
         frametest('front')
         # screentest('front')
     except KeyboardInterrupt:

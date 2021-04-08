@@ -148,7 +148,8 @@ class Controller:
                            'sourceVUVol'  : { 'class' : SourceVUVolScreen, 'base' : 'yes', 'title' : ' Source Icons, VU & Vol Dial' },
                            'spectrum'     : { 'class' : SpectrumScreen, 'base' : 'yes', 'title' : ' left channel spectrum and volume'},
                            'VUScreen'     : { 'class' : VUScreen, 'base' : 'yes', 'title' : ' horizontal VU'},
-                           'VUVertScreen' : { 'class' : VUVScreen, 'base' : 'yes', 'title' : ' vertical VU'}
+                           'VUVertScreen' : { 'class' : VUVScreen, 'base' : 'yes', 'title' : ' vertical VU'},
+                           'RecordScreen' : { 'class' : RecordingScreen, 'base' : 'no', 'title' : ' recording'}
                            }
         for i, (name, c) in enumerate(self.screenList.items()):
             print(("Controller.__init__> screen %s %s" % (name,c)))
@@ -203,7 +204,7 @@ class Controller:
             self.platform.unmute() #unmute the audio board
 
         elif e =='togglemute':
-            self.platform.invertMute() #unmute the audio board            
+            self.platform.invertMute() #unmute the audio board
 
         elif e =='Button up':
             #detected that the mute button has raised - no action
@@ -237,8 +238,12 @@ class Controller:
         elif e =='pause':
             self.platform.streamerpause()
 
-        elif e =='play':
-            self.platform.streamerplay()
+        elif e =='record':
+            if self.platform.recordingState:
+                self.platform.stop_recording()
+            else:
+                self.activeScreen= 'RecordScreen'
+                self.platform.start_recording()
 
         else:
             print("Controller.RemoteAction> unknown event <%s>" % e)
@@ -333,6 +338,9 @@ class Controller:
             self.platform.process()
             self.audioready +=1
 
+        elif e == 'recording_stopped':
+            self.activeScreen= self.baseScreen    
+
         else:
             print("Controller.AudioAction> unknown event ",e)
 
@@ -374,6 +382,8 @@ class Controller:
             self.platform.mute()
         elif e == 'phones_out':
             self.platform.unmute()
+        elif e == 'exit':
+            exit()  # this is a debug mode to terminate execution from the keyboard
 
 
     def StreamerAction(self, e):
