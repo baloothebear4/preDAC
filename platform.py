@@ -529,12 +529,14 @@ class VolumeBoard(PCF8574, Volume):
         if volume < self.volume_raw:
             print("VolumeBoard.setVolume> volume down, MSB off first")
             for i in range(VolumeBoard.VOLUMESTEPS-1, -1, -1):
+                if self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] == relays[i]: continue  # Dont change a bit unless its changed
                 self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = relays[i]
                 time.sleep(VolumeBoard.RELAYSETTLETIME)
                 # print("VolumeBoard.setVolume> relay %d = %d" % (i, self.i2c2.port[ VolumeBoard.RELAYMAP[i] ]))
         else:
             print("VolumeBoard.setVolume> volume up, MSB off last")
             for i in range(0, VolumeBoard.VOLUMESTEPS, 1):
+                if self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] == relays[i]: continue  # Dont change a bit unless its changed
                 self.i2c2.port[ VolumeBoard.RELAYMAP[i] ] = relays[i]
                 time.sleep(VolumeBoard.RELAYSETTLETIME)
                 # print("VolumeBoard.setVolume> relay %d = %d" % (i, self.i2c2.port[ VolumeBoard.RELAYMAP[i] ]))

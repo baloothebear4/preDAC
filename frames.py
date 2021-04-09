@@ -50,6 +50,9 @@ class RecordFrame(Frame):
     def width(self):
         return
 
+
+
+
 class dbVolumeSourceFrame(Frame):
     """
         Displays the volume as a percentage with the source underneath
@@ -141,6 +144,15 @@ class dbVolumeTextFrame(TextFrame):
 class MenuFrame(TextFrame):
     def draw(self, basis):
         text = self.platform.screenName
+        self.display.drawFrameCentredText(basis, self, text, self.font)
+
+class RecordEndFrame(TextFrame):
+    """
+        Displays the file name used to save the recording
+        - has a width determined by the scale
+    """
+    def draw(self, basis):
+        text = self.platform.recordfile
         self.display.drawFrameCentredText(basis, self, text, self.font)
 
 class TrackFrame(TextFrame):
@@ -620,6 +632,13 @@ class RecordingScreen(Frame):
         Frame.__init__(self, display.boundary, platform, display)
         self += RecordFrame( display.boundary, platform, display, 0.3)
         self += VolumeSourceFrame(display.boundary, platform, display, 0.4, 'right')
+        self.check()
+
+class RecordFinishScreen(Frame):
+    def __init__(self, platform, display):
+        Frame.__init__(self, display.boundary, platform, display)
+        self += TextFrame( display.boundary, platform, display, 'top', 0.5, 'Recording saved to')
+        self += RecordEndFrame( display.boundary, platform, display, 'bottom', 0.5)
         self.check()
 
 class SourceVolScreen(Frame):   # comprises volume on the left, spectrum on the right

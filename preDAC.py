@@ -90,6 +90,7 @@ class Controller:
     screensaveTime= 6.0
     shutdownTime  = 1.0   # slight pause to ensure the shutdown screen is displayed
     trackchangeTime= 7.0
+    recordTime    = 7.0
 
     loopdelay     = 0.0001
 
@@ -115,6 +116,7 @@ class Controller:
         self.welcomeTimer    = Timer(Controller.welcomeTime, self.Welcomed, ['welcomeTimeout'], 'welcomeTimer' )
         self.shutdownTimer   = Timer(Controller.shutdownTime, self.platform.poweroff, ['shutdownTimeout'], 'shutdownTimer' )
         self.trackChangeTimer= Timer(Controller.trackchangeTime, self.StreamerAction, ['trackNotified'], 'trackChangeTimer')
+        self.recordTimer     = Timer(Controller.recordTime, self.AudioAction, ['recordNotified'], 'recordTimer')
 
         """ Setup the event callbacks """
         self.events.VolKnob      += self.VolumeChange    # when the volume knob, remote or switch is changed
@@ -128,7 +130,7 @@ class Controller:
 
 
         """Set up the screen for inital Mode"""
-        self.baseScreen     = 'stereoSpectrum'
+        self.baseScreen     = 'spectrum'
         self.preScreenSaver = self.baseScreen
 
         """ Set up the screen objects to be used """
@@ -149,8 +151,10 @@ class Controller:
                            'spectrum'     : { 'class' : SpectrumScreen, 'base' : 'yes', 'title' : ' left channel spectrum and volume'},
                            'VUScreen'     : { 'class' : VUScreen, 'base' : 'yes', 'title' : ' horizontal VU'},
                            'VUVertScreen' : { 'class' : VUVScreen, 'base' : 'yes', 'title' : ' vertical VU'},
-                           'RecordScreen' : { 'class' : RecordingScreen, 'base' : 'no', 'title' : ' recording'}
+                           'RecordScreen' : { 'class' : RecordingScreen, 'base' : 'no', 'title' : ' recording'},
+                           'recordFinishScreen' : { 'class' : RecordFinishScreen, 'base' : 'no', 'title' : ' record_end'}
                            }
+
         for i, (name, c) in enumerate(self.screenList.items()):
             print(("Controller.__init__> screen %s %s" % (name,c)))
             self.screens.update( {name : c['class'](self.platform, display) })
@@ -339,7 +343,11 @@ class Controller:
             self.audioready +=1
 
         elif e == 'recording_stopped':
-            self.activeScreen= self.baseScreen    
+            self.recordTimer.start()
+            self.activeScreen= 'recordFinishScreen'
+
+        elif e == 'recordNotified':
+            self.activeScreen= self.baseScreen
 
         else:
             print("Controller.AudioAction> unknown event ",e)

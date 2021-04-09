@@ -86,6 +86,7 @@ class AudioData():
         self.monosamples     = data
         self.signal_detected = False
         self.peakwindow      = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
+        self.recordfile = self.find_next_file( RECORDINGS_PATTERN )
 
     def filter(self, signal, fc):
         return signal
@@ -216,12 +217,12 @@ class AudioProcessor(AudioData):
 
     def saveRecording(self):
         # Save the recorded data as a WAV file
-        recordfile = self.find_next_file( RECORDINGS_PATTERN )
-        print('Finished recording to ', recordfile)
+        self.recordfile = self.find_next_file( RECORDINGS_PATTERN )
+        print('Finished recording to ', self.recordfile)
         try:
             # bits = self.recorder.get_sample_size(INFORMAT)
             # wf = PyWave.open(recordfile, mode='w', channels = CHANNELS, frequency = RATE, bits_per_sample = bits, format = INFORMAT)
-            wf = wave.open(recordfile, 'wb')
+            wf = wave.open(self.recordfile, 'wb')
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(self.recorder.get_sample_size(INFORMAT))
             wf.setframerate(RATE)
