@@ -152,8 +152,8 @@ class RecordEndFrame(TextFrame):
         - has a width determined by the scale
     """
     def draw(self, basis):
-        text = self.platform.recordfile
-        self.display.drawFrameCentredText(basis, self, text, self.font)
+        (dirname, filename) = os.path.split(self.platform.recordfile)
+        self.display.drawFrameCentredText(basis, self, filename, self.font)
 
 class TrackFrame(TextFrame):
     """ wrap the track name and centre the first 2 lines - discard any more

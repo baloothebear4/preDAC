@@ -105,7 +105,7 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
                       'tape'    : [ 3,               6,  False, 'Tape', True],
                       'aux'     : [ 4,               7,  False, 'Aux', True],
                       'phono'   : [ 5,               3,  True,  'Phono', True],
-                      'streamer': [ 6,               2,  False, 'Streamer', True],
+                      'streamer': [ 6,               2,  False, 'Streamer', True],  # NB: Disabled
                       'mute'    : [ 7,               1,  False, 'mute', False],
                       'gain'    : [ 8,               0,  False, 'gain', False]
                     }
