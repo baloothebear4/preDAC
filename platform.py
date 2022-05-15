@@ -380,12 +380,12 @@ class RemoteController():
                     self.events.RemotePress('stop')
                 elif words[2] == "KEY_PAUSE" and words[1] == "00":
                     self.events.RemotePress('pause')
-                elif words[2] == "KEY_PLAY" and words[1] == "00":  # 05 means that it needs to held down for a while
+                elif words[2] == "KEY_RECORD" and words[1] == "00":  # 05 means that it needs to held down for a while
                     self.events.RemotePress('record')
-            # else:
-            #     print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
+                else:
+                    print("RemoteController.checkRemoteKeyPress> key press not recognised ",words[2], words[1] )
 
-            # return words[2], words[1]
+                # return words[2], words[1]
             except Exception as e:
                 print("RemoteController.checkRemoteKeyPress> exception", e)
                 time.sleep(1)
