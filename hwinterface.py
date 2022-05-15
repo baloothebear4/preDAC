@@ -34,7 +34,8 @@ class Source:
                     'cd'        : ["CD 0.png", "CD 60.png", "CD 120.png", "CD 180.png", "CD 240.png", "CD 300.png" ],
                     'tape'      : ["Tape 0.png", "Tape 60.png", "Tape 120.png", "Tape 180.png", "Tape 240.png", "Tape 300.png"],
                     'aux'       : ["Aux.png"],
-                    'phono'     : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"]  }
+                    'phono'     : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"],
+                    'phono2'    : ["Phono 0.png", "Phono 60.png", "Phono 120.png", "Phono 180.png", "Phono 240.png", "Phono 300.png"]  }
 
     def __init__(self):
         self.sourcesEnabled    = Source.IconFiles.keys()       # List of available (can change as DAC settings are altered)
@@ -97,9 +98,9 @@ class Source:
 class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface point to all the HW classes
     """                source   board relayi2c1 pin ref, gain , text, signal? """
     audioBoardMap = { 'tape'    : [ 1,               4,  False, 'Tape', True],
-                      'cd'      : [ 2,               5,  False, 'CD', True],
+                      'phono2'  : [ 2,               5,  True, 'Ext Phono', True],
                       'dac'     : [ 3,               6,  False, 'DAC', True],
-                      'aux'     : [ 4,               7,  False, 'Aux', True],
+                      'cd'      : [ 4,               7,  False, 'CD', True],
                       'phono'   : [ 5,               3,  True,  'Phono', True],
                       'streamer': [ 6,               2,  False, 'Streamer', True],
                       'mute'    : [ 7,               1,  False, 'mute', False],

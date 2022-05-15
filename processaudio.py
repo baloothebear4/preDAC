@@ -28,8 +28,9 @@ FRAMESIZE       = int(1024*2.0)
 maxValue        = float(2**15)
 SAMPLEPERIOD    = FRAMESIZE/RATE
 
-SILENCESAMPLES  = 7 / SAMPLEPERIOD    #5 seconds worth of samples
-PEAKSAMPLES     = 0.5 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
+SILENCESAMPLES  = 7   / SAMPLEPERIOD  #7 seconds worth of samples
+PEAKSAMPLES     = 0.7 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
+VUSAMPLES       = 0.25 / SAMPLEPERIOD  #0.3 seconds is the ANSI VU standard
 
 RECORDSTATE     = False
 RECORDTIME      = 30 * 60 / SAMPLEPERIOD / CHANNELS # failfase to stop the disk filling up
@@ -47,9 +48,9 @@ DCOFFSETSAMPLES = 200
 
 RMSNOISEFLOOR   = -70    # dB
 DYNAMICRANGE    = 80     # Max dB
-SILENCETHRESOLD = 0.02   # Measured from VU Noise Floor + VU offset
+SILENCETHRESOLD = 0.001   #0.02   # Measured from VU Noise Floor + VU offset
 
-# VU calibration and scaling
+# VU calibration and scaling  DEPRECATED
 PeakRange = DYNAMICRANGE - 5 # was 50 antificipated dB range
 VURange   = DYNAMICRANGE - 20
 PeakOff   = -(RMSNOISEFLOOR + 10) # lower limit to display
@@ -80,12 +81,15 @@ class AudioData():
 
         self.vu       = {'left': 0.5, 'right':0.6}
         self.peak     = {'left': 0.8, 'right':0.9}
+        self.vumax    = {'left': 0.01, 'right':0.01}
+        self.peakmax  = {'left': 3.9, 'right':3.9}
         self.spectrum = {'left': data, 'right':data}
         self.bins     = {'left': data, 'right':data}
         self.samples  = {'left': data_s, 'right':data_s}
         self.monosamples     = data
         self.signal_detected = False
         self.peakwindow      = {'left': WindowAve(PEAKSAMPLES), 'right': WindowAve(PEAKSAMPLES)}
+        self.vuwindow        = {'left': WindowAve(VUSAMPLES), 'right': WindowAve(VUSAMPLES)}
         self.recordfile = self.find_next_file( RECORDINGS_PATTERN )
 
     def filter(self, signal, fc):
@@ -124,8 +128,8 @@ class AudioProcessor(AudioData):
         self.readtime   = []
         self.silence    = WindowAve(SILENCESAMPLES)
 
-        self.window         = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
-        # self.window     = np.blackman(FRAMESIZE)
+        self.window     = np.kaiser(FRAMESIZE+NUMPADS, WINDOW)  #Hanning window
+
         print("AudioProcessor.__init__> ready and reading from soundcard %s, Recording is %s " % (self.recorder.get_default_input_device_info()['name'], RECORDSTATE))
 
     def start_capture(self):
@@ -268,12 +272,14 @@ class AudioProcessor(AudioData):
         self.vu['right'], self.peak['right'] = self.VU('right')
         self.detectSilence()
         self.calcReadtime(False)
+
                 # other functions to calculate DC offset, noise level, silence, RMS quiet etc can go here
 
     def detectSilence(self):
         # use hysterises - quick to detect a signal, slow to detect silience (5 seconds)
-        signal_level = self.vu['left'] + self.vu['right']
+        signal_level = (self.vu['left'] + self.vu['right'])/2.0
         ave_level    = self.silence.average(signal_level)
+        # print (signal_level )
 
         if ave_level < SILENCETHRESOLD:
             print("ProcessAudio.detectSilence> Silence at", ave_level, signal_level)
@@ -331,10 +337,27 @@ class AudioProcessor(AudioData):
     def VU(self,channel):
         """ normalise to 0-1 """
         # print("channel power = ", 10*math.log(self.rmsPower(self.samples[channel]), 10))
+        """ OLD log version
         peak = 10*math.log( np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel]))), 10 )
         vu   = self.floor(  (10*math.log( self.rmsPower(self.samples[channel]), 10)+VUOff)/VURange, 0)
         # print("vu ", vu, "peak", peak)
-        peakave = self.floor( (self.peakwindow[channel].average(peak)+PeakOff)/PeakRange, 0)
+        """
+
+
+        peak = np.abs(np.square(np.max(self.samples[channel]) -np.min(self.samples[channel])))
+        vu   = 3 * self.vuwindow[channel].average( np.sqrt(np.mean(np.square( self.samples[channel] ) ) )/1.414 )
+        # print (vu)
+
+        # Leave the maximums preset
+        if peak > self.peakmax[channel]:
+            self.peakmax[channel] = peak
+            print("vu max", vu, "peak max", peak, "channel ", channel)
+        #
+        if vu > self.vumax[channel]:
+            self.vumax[channel] = vu
+            print("vu max", self.vumax[channel], "peak max", self.peakmax[channel], "channel ", channel)
+
+        peakave = self.peakwindow[channel].average(peak/ self.peakmax[channel])
 
         return (vu, peakave)
 

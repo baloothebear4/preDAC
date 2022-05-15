@@ -329,7 +329,7 @@ class VUMeterNeedle(Frame):
         Frame.__init__(self, platform=platform, bounds=bounds, display=display, scalers=(1.0, 1.0), Valign='top', Halign=channel)
 
     def draw(self, basis):
-        vu        = self.platform.vu[self.channel]*0.85 + 0.05  #scale to limit range
+        vu        = self.platform.vu[self.channel]  #was 0.85 + 0.05  #scale to limit range
         needlelen = self.h*(1+VUMeterBackground.PIVOT)
         self.display.drawFrameCentredVector(basis, self, needlelen , vu, -self.h*VUMeterBackground.PIVOT, 'white')
 
