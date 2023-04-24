@@ -128,8 +128,8 @@ class AudioBoard(Source, PCF8574):  #subclass so that there is only 1 interface 
     address         = 0x20
     PHONESDETECTPIN = 12
 
-    GAINONDB        = 25
-    GAINOFFDB       = 12
+    GAINONDB        = 19
+    GAINOFFDB       = 6
 
     def __init__(self, events):
         self.events = events
