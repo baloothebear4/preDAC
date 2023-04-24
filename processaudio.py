@@ -30,7 +30,7 @@ SAMPLEPERIOD    = FRAMESIZE/RATE
 
 SILENCESAMPLES  = 7   / SAMPLEPERIOD  #7 seconds worth of samples
 PEAKSAMPLES     = 0.7 / SAMPLEPERIOD  #0.5 seconds worth of VU measurements
-VUSAMPLES       = 0.25 / SAMPLEPERIOD  #0.3 seconds is the ANSI VU standard
+VUSAMPLES       = 0.1 / SAMPLEPERIOD  #0.3 seconds is the ANSI VU standard
 
 RECORDSTATE     = False
 RECORDTIME      = 30 * 60 / SAMPLEPERIOD / CHANNELS # failfase to stop the disk filling up
