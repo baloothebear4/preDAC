@@ -17,7 +17,8 @@ git clone <preDAC repo link>
 4.  Install all the dependent packages
 ```  
 cd preDAC
-sudo pip3 install -r requirements.txt 
+sudo pip3 install -r requirements.txt
+sudo apt install python3-pyaudio
 ```
 5. Move the config files to the correct locations
 ```
