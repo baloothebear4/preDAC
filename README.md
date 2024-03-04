@@ -12,12 +12,12 @@ sudo apt install git
 ```
 3. Copy down all of the application code
 ```
-git clone ...
+git clone <preDAC repo link>
 ``` 
 4.  Install all the dependent packages
 ```  
 cd preDAC
-sudo pip3 install requirements.txt 
+sudo pip3 install -r requirements.txt 
 ```
 5. Move the config files to the correct locations
 ```
