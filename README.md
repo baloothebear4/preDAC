@@ -8,31 +8,28 @@ Control and audio processing of an integrated preamplifier, with a range of visu
 ```
 sudo apt update
 sudo apt upgrade
+sudo apt install git
 ```
-3.  Update the python build environment
-```
-python3 pip upgrade
-```
-4. Copy down all of the application code
+3. Copy down all of the application code
 ```
 git clone ...
 ``` 
-5.  Install all the dependent packages
+4.  Install all the dependent packages
 ```  
 cd preDAC
 sudo pip3 install requirements.txt 
 ```
-6. Move the config files to the correct locations
+5. Move the config files to the correct locations
 ```
 config.txt
 .lirc
 preDAC.service
 ``` 
-8. Start the autorunning service
+6. Start the autorunning service
 ```
 sudo systemcmd preDAC.service
 reboot
 ``` 
-9. All good to listen to great music
+7. All good to listen to great music
 
 
