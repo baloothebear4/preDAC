@@ -31,18 +31,18 @@ def make_font(name, size):
 def scaleImage(image_path, geo):
     """  scales an image to fit the frame, with the height or width changing proportionally """
     """  Find out which parameter does not fit the frame """
-
+    ANTIALIAS = Image.LANCZOS
     image = Image.open(image_path).convert("L")  #RGBA
     if   float(image.width) / geo.w > float(image.height) / geo.h:
         wpercent = (geo.w/float(image.width))
         hsize = int((float(image.height)*float(wpercent)))
         # print ("SourceIcon.scaleimage> height", hsize, wpercent)
-        return image.resize((geo.w, hsize), Image.ANTIALIAS)
+        return image.resize((geo.w, hsize), ANTIALIAS)
     else:
         wpercent = (geo.h/float(image.height))
         wsize = int((float(image.width)*float(wpercent)))
         # print ("SourceIcon.scaleimage> width", wsize, wpercent)
-        return image.resize((wsize, geo.h), Image.ANTIALIAS)
+        return image.resize((wsize, geo.h), ANTIALIAS)
     return image
 
 def scalefont(display, wh, text, font, min=3):
@@ -98,7 +98,10 @@ class OLEDdriver(canvas):
 
     def textsize(self, text, font):
         with canvas(self.device) as c:
-            return c.textsize(text, font)
+            box = c.textbbox((0,0), text, font=font)
+            #print("textsize", box, text)
+
+            return (box[2]-box[1],box[3]-box[1])
 
     @property
     def boundary(self):
@@ -124,7 +127,7 @@ class OLEDdriver(canvas):
         basis.rectangle(self.trabcd(coords), fill=fill)
 
     def drawFrameLVCentredtext(self, basis, geo, text, font):
-        w, h = basis.textsize(text=text, font=font)
+        w, h = self.textsize(text=text, font=font)
         # if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text to wide for frame")
         # if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text to high for frame")
         xy = (geo.x0, geo.centre[1]+h/2)
@@ -132,14 +135,14 @@ class OLEDdriver(canvas):
 
     def drawFrameCentredText( self, basis, geo, text, font):
         """ text is written in the centre of the frame """
-        w, h = basis.textsize(text=text, font=font)
+        wh = self.textsize(text, font=font)
         # if w > geo.w+2: print("OLEDdriver.drawFrameCentredText> text %s too wide %d, for frame %d" % (text, w, geo.w))
         # if h > geo.h+2: print("OLEDdriver.drawFrameCentredText> text %s too high %d, for frame %d" % (text, h, geo.h))
-        xy = (geo.centre[0]-w/2, geo.centre[1]+h/2)
+        xy = (geo.centre[0]-wh[0]/2, geo.centre[1]+wh[1]/2)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
     def drawFrameTopCentredText( self, basis, geo, text, font):
-        w, h = basis.textsize(text=text, font=font)
+        w, h = self.textsize(text=text, font=font)
         xy = (geo.centre[0]-w/2, geo.d)
         basis.text(self.trxy( xy ), text=text, font=font , fill="white")
 
@@ -166,7 +169,9 @@ class OLEDdriver(canvas):
         basis.polygon( ( xy, xy1, xy2 ) , fill=fill, outline=fill )
 
     def drawFrameBar(self, basis, geo, x, ypc, w, fill ):
-        coords = (geo.x0+x, geo.y0, geo.x0+x+w, geo.y0+geo.y1*ypc)
+        #coords = (geo.x0+x, geo.y0, geo.x0+x+w, geo.y0+geo.y1*ypc)
+        coords = (geo.x0+x, geo.y0+geo.y1*ypc, geo.x0+x+w, geo.y0)
+        #print("drawFrameBar", coords, self.trabcd(coords))
         basis.rectangle( self.trabcd(coords), fill=fill)
 
     def drawFrameCentredCircle(self, basis, geo, r, y, colour ):
@@ -189,7 +194,7 @@ class OLEDdriver(canvas):
         ab     = self.anglerange(geo.w, len)
         angle  = 180-(ab[0] + val * (ab[1]-ab[0]))
         xy     = self.posn(angle, len)
-        w, h   = basis.textsize(text=text, font=font)
+        w, h   = self.textsize(text=text, font=font)
         # print("vectorText: angle %s, xy %s, ab %s, yoff %d, len %d" % (angle, xy, ab, yoffset, len))
         xy = ( geo.centre[0]+xy[0]-w/2, yoffset+xy[1] )
         basis.text( self.trxy(xy), fill=colour, text=text, font=font)
@@ -250,7 +255,10 @@ class OLEDdriver(canvas):
 
         self.calcDisplaytime(False)
 
-    def trabcd(self, coords):
+    def trabcd(self, basecoords):
+        coords = list(basecoords)    
+        for i, v in enumerate(coords):
+            if v < 0: coords[i] = 0
         new = (coords[0], self.device.height-coords[1]-1, coords[2], self.device.height-coords[3]-1)
         # print("trabcd from %s to %s - device height %f" % (coords, new, self.device.height ))
         return new

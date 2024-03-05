@@ -15,7 +15,7 @@
 from events import Events
 import time
 
-from platform import Platform, ListNext
+from hwplatform import Platform, ListNext
 from frames import *
 
 
@@ -139,8 +139,8 @@ class Controller:
                            'start'        : { 'class' : WelcomeScreen, 'base' : 'no', 'title' : 'welcome' },
                            'volChange'    : { 'class' : VolChangeScreen, 'base' : 'no', 'title' : 'Incidental volume change indicator' },
                            # 'fullSpectrum' : { 'class' : FullSpectrumScreen, 'base' : 'yes', 'title' : '1/6 Octave Spectrum Analyser' },
-                           'StreamerMeta' : { 'class' : PlayerScreen, 'base' : 'yes', 'title' : 'Track data, volume and source' },
-                           'trackChange'  : { 'class' : TrackScreen, 'base' : 'no', 'title' : 'New Track data' },
+                           #'StreamerMeta' : { 'class' : PlayerScreen, 'base' : 'yes', 'title' : 'Track data, volume and source' },
+                           #'trackChange'  : { 'class' : TrackScreen, 'base' : 'no', 'title' : 'New Track data' },
                            'stereoSpectrum' :{'class' : StereoSpectrumScreen, 'base' : 'yes', 'title' : 'Stereo Spectrum Analyser' },
                            'VUMeters'     : { 'class' : MetersAScreen, 'base' : 'yes', 'title' : 'Stereo VU Meters' },
                            'shutdown'     : { 'class' : ShutdownScreen, 'base' : 'no', 'title' : 'end' },

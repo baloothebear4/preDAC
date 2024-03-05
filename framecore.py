@@ -22,7 +22,7 @@ from oleddriver import make_font, scaleImage
 
 import os, time
 from oleddriver import internalOLED     # used for Test purposes
-from platform   import Platform         # used for Test purposes
+#from platform   import Platform         # used for Test purposes
 
 class Geometry():
     def __init__(self, bounds=[0,0,0,0]):

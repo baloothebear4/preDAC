@@ -416,7 +416,7 @@ class AudioProcessor(AudioData):
             while bincount*BINBANDWIDTH <= band:
                 bincount    += 1
 
-            level = 10*np.log10((bins[startbin:bincount].mean()))
+            level = 10*np.log10((bins[startbin:bincount].mean()+0.0000001))
             spectrumBands.append( self.normalise(level) )
             startbin = bincount
 

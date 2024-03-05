@@ -82,6 +82,7 @@ class RotaryEncoder2:
         devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
         for device in devices:
             if device.name == deviceName:
+                print(device.name, device.path)
                 return device.path
         print("RotaryEncoder2.matchInputDevice> deviceName not found>", deviceName)
         return 0
@@ -111,8 +112,8 @@ def main():
     Test harness for the RotaryEncoder and Volume classes
     '''
 
-    KNOBS        = { 'RHS': [16, 26, 13, '/dev/input/event0'], \
-                     'LHS': [27, 22, 17, '/dev/input/eventTBC'] }
+    KNOBS        = { 'RHS': [16, 26, 13, '/dev/uinput/event0'], \
+                     'LHS': [27, 22, 17, '/dev/uinput/event1'] }
     # #volume knob (RHS)
     # PIN_A        = 26
     # PIN_B        = 16
