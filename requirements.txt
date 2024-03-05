@@ -1,0 +1,10 @@
+pcf8574 
+pillow 
+numpy 
+luma.oled
+events
+RPi.GPIO
+pyky040
+python-mpd2
+evdev
+wave
