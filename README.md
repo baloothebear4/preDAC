@@ -19,10 +19,12 @@ git clone <preDAC repo link>
 cd preDAC
 sudo pip3 install -r requirements.txt
 sudo apt install python3-pyaudio
+sudo apt-get install lirc
 ```
 5. Move the config files to the correct locations
 ```
-config.txt
+sudo cp /boot/config.txt /boot/config.txt.moode
+sudo cp ~/preDAC/config.txt /boot
 .lirc
 preDAC.service
 ``` 
