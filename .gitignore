@@ -1,0 +1,21 @@
+*.wav
+
+# OS generated files
+.DS_Store
+.directory
+Thumbs.db
+*.swp
+
+# Raspberry Pi / Linux specific
+*.log
+*.out
+*.tmp
+*.bak
+.cache/
+
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/

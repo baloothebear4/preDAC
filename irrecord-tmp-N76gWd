@@ -1,0 +1,42 @@
+
+# Please take the time to finish this file as described in
+# https://sourceforge.net/p/lirc-remotes/wiki/Checklist/
+# and make it available to others by sending it to
+# <lirc@bartelmus.de>
+#
+# This config file was automatically generated
+# using lirc-0.10.1(default) on Sun May 15 12:46:25 2022
+# Command line used: -u
+# Kernel version (uname -r): 5.4.79-v7+
+#
+# Remote name (as of config file): ARCAMCR107
+# Brand of remote device, the thing you hold in your hand:
+# Remote device model nr:
+# Remote device info url:
+# Does remote device has a bundled capture device e. g., a
+#     usb dongle? :
+# For bundled USB devices: usb vendor id, product id
+#     and device string (use dmesg or lsusb):
+# Type of device controlled
+#     (TV, VCR, Audio, DVD, Satellite, Cable, HTPC, ...) :
+# Device(s) controlled by this remote:
+
+begin remote
+
+  name  ARCAMCR107
+  bits           13
+  flags RC5|CONST_LENGTH
+  eps            30
+  aeps          100
+
+  one           915   860
+  zero          915   860
+  plead         920
+  gap          113854
+  toggle_bit_mask 0x0
+
+      begin codes
+          KEY_MUTE                 0x1C0D
+      end codes
+
+end remote
