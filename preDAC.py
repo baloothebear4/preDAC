@@ -92,7 +92,7 @@ class Controller:
     trackchangeTime= 7.0
     recordTime    = 7.0
 
-    loopdelay     = 0.0001
+    loopdelay     = 0.001
 
     def __init__(self, test_mode=False):
         self.test_mode = test_mode
